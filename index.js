@@ -18,8 +18,6 @@ async function startReaper() {
   let pairingRequested = false;
 
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
-
-    // Request pairing code only when the socket is connecting
     if (
       connection === "connecting" &&
       !state.creds.registered &&
@@ -30,11 +28,14 @@ async function startReaper() {
       const phoneNumber = process.env.PHONE_NUMBER;
 
       if (!phoneNumber) {
-        console.log("❌ PHONE_NUMBER is not set in Railway Variables.");
+        console.log("❌ PHONE_NUMBER is not set.");
         return;
       }
 
       try {
+        // Give the WhatsApp socket a moment to establish
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
         const code = await sock.requestPairingCode(
           phoneNumber.replace(/\D/g, "")
         );
@@ -56,9 +57,11 @@ async function startReaper() {
     if (connection === "close") {
       const code = lastDisconnect?.error?.output?.statusCode;
 
+      console.log("❌ Connection closed. Code:", code);
+
       if (code !== DisconnectReason.loggedOut) {
-        console.log("🔄 Reaper reconnecting...");
-        setTimeout(() => startReaper(), 3000);
+        console.log("🔄 Reaper restarting...");
+        setTimeout(() => startReaper(), 5000);
       } else {
         console.log("❌ WhatsApp session logged out.");
       }
@@ -75,7 +78,9 @@ async function startReaper() {
       msg.message.extendedTextMessage?.text ||
       "";
 
-    if (text.toLowerCase() === ".reaper") {
+    const command = text.toLowerCase().trim();
+
+    if (command === ".reaper") {
       await sock.sendMessage(msg.key.remoteJid, {
         text:
           "☠️ *THE REAPER* 🩸\n\n" +
@@ -84,7 +89,7 @@ async function startReaper() {
       });
     }
 
-    if (text.toLowerCase() === ".menu") {
+    if (command === ".menu") {
       await sock.sendMessage(msg.key.remoteJid, {
         text:
           "☠️ *THE REAPER* 🩸\n\n" +
@@ -95,7 +100,7 @@ async function startReaper() {
       });
     }
 
-    if (text.toLowerCase() === ".profile") {
+    if (command === ".profile") {
       await sock.sendMessage(msg.key.remoteJid, {
         text:
           "☠️ *THE REAPER — PROFILE*\n\n" +
