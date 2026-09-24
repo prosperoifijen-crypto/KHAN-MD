@@ -4,7 +4,7 @@
   "type": "module",
   "description": "A WhatsApp Bot Created By JawadTechX",
   "main": "index.js",
-   "scripts": {
+  "scripts": {
     "start": "pm2 start index.js --deep-monitoring --attach --name KHAN-MD",
     "stop": "pm2 stop KHAN-MD",
     "restart": "pm2 restart KHAN-MD"
@@ -38,6 +38,7 @@
     "cheerio": "^1.0.0-rc.12",
     "qrcode-terminal": "^0.12.0",
     "yt-search": "2.13.1",
+    "yt-dlp-exec": "^1.0.2",
     "events": "^3.3.0",
     "jimp": "latest",
     "translate-google-api": "^1.0.4",
