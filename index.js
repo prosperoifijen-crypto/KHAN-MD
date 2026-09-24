@@ -15,28 +15,40 @@ async function startReaper() {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // WhatsApp pairing code
-  if (!state.creds.registered) {
-    const phoneNumber = process.env.PHONE_NUMBER;
+  let pairingRequested = false;
 
-    if (!phoneNumber) {
-      console.log("❌ PHONE_NUMBER is not set in Railway Variables.");
-      return;
+  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+
+    // Request pairing code only when the socket is connecting
+    if (
+      connection === "connecting" &&
+      !state.creds.registered &&
+      !pairingRequested
+    ) {
+      pairingRequested = true;
+
+      const phoneNumber = process.env.PHONE_NUMBER;
+
+      if (!phoneNumber) {
+        console.log("❌ PHONE_NUMBER is not set in Railway Variables.");
+        return;
+      }
+
+      try {
+        const code = await sock.requestPairingCode(
+          phoneNumber.replace(/\D/g, "")
+        );
+
+        console.log("☠️ THE REAPER PAIRING CODE:", code);
+        console.log(
+          "📱 WhatsApp → Linked Devices → Link a Device → Link with phone number instead"
+        );
+      } catch (error) {
+        console.error("❌ Pairing code error:", error);
+        pairingRequested = false;
+      }
     }
 
-    try {
-      const code = await sock.requestPairingCode(
-        phoneNumber.replace(/\D/g, "")
-      );
-
-      console.log("☠️ THE REAPER PAIRING CODE:", code);
-      console.log("📱 Enter this code in WhatsApp → Linked Devices → Link a Device → Link with phone number instead");
-    } catch (error) {
-      console.error("❌ Failed to generate pairing code:", error);
-    }
-  }
-
-  sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
     if (connection === "open") {
       console.log("☠️ THE REAPER HAS AWAKENED 🩸");
     }
