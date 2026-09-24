@@ -1465,3 +1465,994 @@ ${text}`,
 
     return;
       }
+  if (
+    lower === "setprefix" ||
+    lower === "setmenu" ||
+    lower === "setmenuimage" ||
+    lower === "setmenuaudio" ||
+    lower === "botsettings"
+  ) {
+    if (!isOwner(sender)) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Owner only.",
+        msg
+      );
+      return;
+    }
+
+    if (lower === "setprefix") {
+      const value = args[0] || ".";
+
+      settings.prefix = value;
+      saveSettings();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Prefix changed to: ${value}`,
+        msg
+      );
+      return;
+    }
+
+    if (lower === "setmenuimage") {
+      settings.menuImage =
+        String(args[0]).toLowerCase() !== "off";
+
+      saveSettings();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Menu image: ${
+          settings.menuImage ? "ON" : "OFF"
+        }`,
+        msg
+      );
+      return;
+    }
+
+    if (lower === "setmenu") {
+      settings.menuImage =
+        String(args[0]).toLowerCase() !== "off";
+
+      saveSettings();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Menu image: ${
+          settings.menuImage ? "ON" : "OFF"
+        }`,
+        msg
+      );
+      return;
+    }
+
+    if (lower === "setmenuaudio") {
+      await reply(
+        sock,
+        jid,
+        "🦇 Menu audio setting is reserved for the audio file integration.",
+        msg
+      );
+      return;
+    }
+
+    await reply(
+      sock,
+      jid,
+      `🦇 BOT SETTINGS
+
+Prefix: ${settings.prefix}
+Menu image: ${settings.menuImage ? "ON" : "OFF"}
+Welcome: ${settings.welcome ? "ON" : "OFF"}
+Goodbye: ${settings.goodbye ? "ON" : "OFF"}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    [
+      "addxp",
+      "addcoins",
+      "setrank",
+      "userstats"
+    ].includes(lower)
+  ) {
+    if (!isOwner(sender)) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Owner only.",
+        msg
+      );
+      return;
+    }
+
+    let target =
+      getMentionedJids(msg)[0] ||
+      getReplyJid(msg);
+
+    if (!target && args[0]) {
+      const n = normalizeNumber(args[0]);
+      if (n) target = `${n}@s.whatsapp.net`;
+    }
+
+    if (!target) {
+      target = sender;
+    }
+
+    const targetUser =
+      getUser(target, "Soul");
+
+    if (lower === "addxp") {
+      const amount =
+        Number(args[1] || args[0] || 100);
+
+      addXP(
+        target,
+        Number.isFinite(amount) ? amount : 100,
+        targetUser.name
+      );
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Added XP to ${targetUser.name}.
+⚡ XP: ${targetUser.xp}
+📈 Level: ${targetUser.level}`,
+        msg
+      );
+      return;
+    }
+
+    if (lower === "addcoins") {
+      const amount =
+        Number(args[1] || args[0] || 100);
+
+      targetUser.coins +=
+        Number.isFinite(amount)
+          ? amount
+          : 100;
+
+      saveUsers();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Coins added.
+🪙 Balance: ${targetUser.coins}`,
+        msg
+      );
+      return;
+    }
+
+    if (lower === "setrank") {
+      const rank =
+        args.slice(1).join(" ") ||
+        args.join(" ");
+
+      if (!rank) {
+        await reply(
+          sock,
+          jid,
+          "🦇 Usage: setrank <number> <rank>",
+          msg
+        );
+        return;
+      }
+
+      targetUser.rank = rank;
+      saveUsers();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Rank set to: ${rank}`,
+        msg
+      );
+      return;
+    }
+
+    await reply(
+      sock,
+      jid,
+      `🦇 USER STATS
+
+Name: ${targetUser.name}
+Rank: ${targetUser.rank}
+Level: ${targetUser.level}
+XP: ${targetUser.xp}
+Coins: ${targetUser.coins}
+Wins: ${targetUser.wins}
+Losses: ${targetUser.losses}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "joke" ||
+    lower === "quote" ||
+    lower === "8ball" ||
+    lower === "compliment" ||
+    lower === "roast" ||
+    lower === "roastme" ||
+    lower === "mood"
+  ) {
+    const responses = {
+      joke: [
+        "🦇 Why did the Reaper bring a ladder? To reach the next level.",
+        "🦇 Death never gets tired. It has unlimited stamina.",
+        "🦇 I told Death a joke. It died laughing."
+      ],
+      quote: [
+        "🦇 I don't chase death. Death knows where to find me.",
+        "🦇 Fear the silence before the Reaper speaks.",
+        "🦇 Every soul leaves a shadow."
+      ],
+      compliment: [
+        "🦇 Your soul burns brighter than most.",
+        "🦇 Even the darkness noticed you.",
+        "🦇 You have Reaper energy."
+      ],
+      roast: [
+        "🦇 Even the shadows are embarrassed for you.",
+        "🦇 Your enemies don't need weapons. They have you.",
+        "🦇 The Reaper checked your stats and left disappointed."
+      ],
+      roastme: [
+        "🦇 You asked the Reaper for a roast. Bold choice.",
+        "🦇 Your Wi-Fi has more connection than your plans.",
+        "🦇 Even your shadow needs distance."
+      ],
+      "8ball": [
+        "🦇 The darkness says yes.",
+        "🦇 The darkness says no.",
+        "🦇 Ask again when the moon rises.",
+        "🦇 The Reaper refuses to reveal that."
+      ],
+      mood: [
+        "🦇 Current mood: DARK.",
+        "🦇 Current mood: REAPING.",
+        "🦇 Current mood: UNTOUCHABLE.",
+        "🦇 Current mood: CHAOTIC."
+      ]
+    };
+
+    const pool =
+      responses[lower] ||
+      responses.joke;
+
+    await reply(
+      sock,
+      jid,
+      random(pool),
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "love" ||
+    lower === "ship" ||
+    lower === "truth" ||
+    lower === "dare" ||
+    lower === "hug" ||
+    lower === "kiss" ||
+    lower === "slap" ||
+    lower === "punch" ||
+    lower === "pat" ||
+    lower === "poke" ||
+    lower === "wink" ||
+    lower === "dance" ||
+    lower === "laugh" ||
+    lower === "cry" ||
+    lower === "happy" ||
+    lower === "angry"
+  ) {
+    const target =
+      getMentionedJids(msg)[0] ||
+      getReplyJid(msg) ||
+      "someone";
+
+    const name =
+      target === "someone"
+        ? "someone"
+        : `@${target.split("@")[0]}`;
+
+    const actions = {
+      love: `❤️ ${name} has been touched by the Reaper's love.`,
+      ship: `🦇 ❤️ ${name} and ${user.name} have a mysterious connection.`,
+      truth: "🦇 Truth: What is your biggest secret?",
+      dare: "🦇 Dare: Challenge someone in this group.",
+      hug: `🫂 ${user.name} hugs ${name}.`,
+      kiss: `💋 ${user.name} sends a Reaper kiss to ${name}.`,
+      slap: `🦇 ${user.name} slaps ${name}.`,
+      punch: `🥊 ${user.name} punches ${name}.`,
+      pat: `🦇 ${user.name} pats ${name}.`,
+      poke: `👉 ${user.name} pokes ${name}.`,
+      wink: `😉 ${user.name} winks at ${name}.`,
+      dance: `💃 ${user.name} starts dancing.`,
+      laugh: `😂 ${user.name} cannot stop laughing.`,
+      cry: `😭 ${user.name} enters the darkness.`,
+      happy: `😈 ${user.name} is feeling dangerous.`,
+      angry: `😡 ${user.name} has awakened the rage.`
+    };
+
+    const message =
+      actions[lower] ||
+      "🦇 The Reaper watches.";
+
+    if (target !== "someone") {
+      await sock.sendMessage(
+        jid,
+        {
+          text: message,
+          mentions: [target]
+        },
+        { quoted: msg }
+      );
+    } else {
+      await reply(
+        sock,
+        jid,
+        message,
+        msg
+      );
+    }
+
+    return;
+  }
+
+  if (
+    lower === "story" ||
+    lower === "chapter" ||
+    lower === "lore" ||
+    lower === "chronicles"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 THE REAPER CHRONICLES
+
+Chapter I — The Awakening
+
+The world slept beneath a silent moon.
+
+Then the darkness moved.
+
+No warning.
+No footsteps.
+No voice.
+
+Only a single message remained:
+
+"I don't chase death. Death knows where to find me."
+
+THE REAPER HAS AWAKENED.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "fight" ||
+    lower === "battle" ||
+    lower === "attack"
+  ) {
+    const damage =
+      Math.floor(Math.random() * 91) + 10;
+
+    const reward =
+      Math.floor(damage * 2);
+
+    user.coins += reward;
+
+    addXP(
+      sender,
+      Math.floor(damage / 2),
+      user.name
+    );
+
+    await reply(
+      sock,
+      jid,
+      `⚔️ REAPER BATTLE
+
+💥 Damage: ${damage}
+🪙 Reward: ${reward} coins
+⚡ XP gained: ${Math.floor(damage / 2)}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "power" ||
+    lower === "blood" ||
+    lower === "soul" ||
+    lower === "shadow" ||
+    lower === "ritual" ||
+    lower === "summon" ||
+    lower === "curse" ||
+    lower === "bless"
+  ) {
+    const power =
+      Math.floor(Math.random() * 900) + 100;
+
+    addXP(
+      sender,
+      20,
+      user.name
+    );
+
+    await reply(
+      sock,
+      jid,
+      `🦇 ${lower.toUpperCase()}
+
+☠️ Power generated: ${power}
+⚡ +20 XP`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "mission" ||
+    lower === "quest" ||
+    lower === "train"
+  ) {
+    const rewards = [
+      "Defeat the shadow lurking beyond the gate.",
+      "Collect three forgotten souls.",
+      "Survive the Reaper's trial.",
+      "Find the hidden artifact.",
+      "Challenge the darkness."
+    ];
+
+    const mission =
+      random(rewards);
+
+    addXP(
+      sender,
+      15,
+      user.name
+    );
+
+    await reply(
+      sock,
+      jid,
+      `🦇 ${lower.toUpperCase()}
+
+🎯 ${mission}
+
+⚡ +15 XP`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "ai" ||
+    lower === "chat" ||
+    lower === "ask" ||
+    lower === "explain" ||
+    lower === "rewrite" ||
+    lower === "summarize" ||
+    lower === "translate"
+  ) {
+    const prompt =
+      args.join(" ").trim();
+
+    if (!prompt) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Usage: ${lower} <your text>`,
+        msg
+      );
+      return;
+    }
+
+    await reply(
+      sock,
+      jid,
+      `🦇 ${BOT_NAME} AI module
+
+Your request was received:
+
+"${prompt}"
+
+⚠️ No external AI API is connected yet.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "play" ||
+    lower === "yt" ||
+    lower === "ytmp3" ||
+    lower === "ytmp4" ||
+    lower === "tiktok" ||
+    lower === "ig" ||
+    lower === "igdl" ||
+    lower === "facebook" ||
+    lower === "fbdl" ||
+    lower === "twitter" ||
+    lower === "twitterdl" ||
+    lower === "movie" ||
+    lower === "music" ||
+    lower === "song" ||
+    lower === "video" ||
+    lower === "media" ||
+    lower === "socialdl" ||
+    lower === "aio" ||
+    lower === "download" ||
+    lower === "dload"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 Downloader command detected: ${lower}
+
+⚠️ A real downloader API/service must be connected before this command can download media.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "sticker" ||
+    lower === "toimage" ||
+    lower === "toaudio" ||
+    lower === "removebg" ||
+    lower === "getpp" ||
+    lower === "setpp" ||
+    lower === "take" ||
+    lower === "viewonce" ||
+    lower === "qr" ||
+    lower === "wallpaper" ||
+    lower === "upload"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 Media command: ${lower}
+
+⚠️ This command is registered and ready for its media module.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "support" || lower === "repo") {
+    await reply(
+      sock,
+      jid,
+      `🦇 THE REAPER
+
+Repository:
+prosperoifijen-crypto/KHAN-MD
+
+Status: Online
+Motto: I don't chase death. Death knows where to find me.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "random") {
+    await reply(
+      sock,
+      jid,
+      random([
+        "🦇 A shadow just crossed behind you.",
+        "🦇 The Reaper is watching.",
+        "🦇 Something is moving in the darkness.",
+        "🦇 Your next decision changes everything.",
+        "🦇 The moon remembers every soul."
+      ]),
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "restart") {
+    if (!isOwner(sender)) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Owner only.",
+        msg
+      );
+      return;
+    }
+
+    await reply(
+      sock,
+      jid,
+      "🦇 Restarting The Reaper...",
+      msg
+    );
+
+    setTimeout(
+      () => process.exit(0),
+      1000
+    );
+
+    return;
+  }
+
+  if (lower === "shutdown") {
+    if (!isOwner(sender)) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Owner only.",
+        msg
+      );
+      return;
+    }
+
+    await reply(
+      sock,
+      jid,
+      "🦇 The Reaper is shutting down.",
+      msg
+    );
+
+    setTimeout(
+      () => process.exit(0),
+      1000
+    );
+
+    return;
+  }
+
+  if (
+    lower === "block" ||
+    lower === "unblock"
+  ) {
+    if (!isOwner(sender)) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Owner only.",
+        msg
+      );
+      return;
+    }
+
+    const target =
+      getMentionedJids(msg)[0] ||
+      getReplyJid(msg);
+
+    if (!target) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Reply to a user or mention them.\nExample: ${lower} @user`,
+        msg
+      );
+      return;
+    }
+
+    try {
+      await sock.updateBlockStatus(
+        target,
+        lower === "block"
+          ? "block"
+          : "unblock"
+      );
+
+      await reply(
+        sock,
+        jid,
+        `🦇 ${lower} completed.`,
+        msg
+      );
+    } catch {
+      await reply(
+        sock,
+        jid,
+        "🦇 WhatsApp rejected the request.",
+        msg
+      );
+    }
+
+    return;
+  }
+
+  if (lower === "protection") {
+    await reply(
+      sock,
+      jid,
+      `🦇 REAPER PROTECTION
+
+Antilink: registered
+Antibadword: registered
+Antispam: registered
+Antiflood: registered
+Antibot: registered
+
+⚠️ Protection modules require their individual configuration before automatic enforcement.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (ALL_COMMANDS.has(lower)) {
+    await reply(
+      sock,
+      jid,
+      `🦇 Command "${lower}" is registered.
+
+Its full module is not enabled yet.`,
+      msg
+    );
+
+    return;
+  }
+
+  await react(
+    sock,
+    jid,
+    msg.key,
+    "❌"
+  );
+
+  await reply(
+    sock,
+    jid,
+    `❌ Unknown command: ${cmd}
+
+🦇 Type menu to see all available commands.`,
+    msg
+  );
+}
+
+async function startBot() {
+  const {
+    state,
+    saveCreds
+  } = await useMultiFileAuthState(
+    "./auth_info"
+  );
+
+  let version;
+
+  try {
+    const latest =
+      await fetchLatestWaWebVersion();
+
+    if (latest?.version) {
+      version = latest.version;
+      console.log(
+        `Using WhatsApp Web version: ${version.join(".")}`
+      );
+    }
+  } catch {
+    console.log(
+      "Could not fetch latest WhatsApp Web version."
+    );
+  }
+
+  const sock =
+    makeWASocket({
+      auth: state,
+      version,
+      printQRInTerminal: false,
+      logger: P({
+        level: "silent"
+      }),
+      browser: [
+        "The Reaper",
+        "Chrome",
+        "1.0.0"
+      ],
+      generateHighQualityLinkPreview: false
+    });
+
+  sock.ev.on(
+    "creds.update",
+    saveCreds
+  );
+
+  sock.ev.on(
+    "connection.update",
+    async update => {
+      const {
+        connection,
+        lastDisconnect
+      } = update;
+
+      if (connection === "open") {
+        console.log(
+          "🦇 THE REAPER HAS AWAKENED."
+        );
+        console.log(
+          "🟢 WhatsApp connection established."
+        );
+      }
+
+      if (connection === "close") {
+        const statusCode =
+          lastDisconnect?.error?.output?.statusCode;
+
+        console.log(
+          `🔴 WhatsApp connection closed. Code: ${statusCode || "unknown"}`
+        );
+
+        if (
+          statusCode !==
+          DisconnectReason.loggedOut
+        ) {
+          console.log(
+            "♻️ Reconnecting..."
+          );
+
+          setTimeout(
+            startBot,
+            3000
+          );
+        } else {
+          console.log(
+            "⚠️ Logged out. Delete auth_info and pair again."
+          );
+        }
+      }
+    }
+  );
+
+  sock.ev.on(
+    "messages.upsert",
+    async ({ messages }) => {
+      try {
+        const msg =
+          messages?.[0];
+
+        if (!msg?.message) {
+          return;
+        }
+
+        const text =
+          getText(msg);
+
+        if (!text) {
+          return;
+        }
+
+        const sender =
+          jidFromMessage(msg);
+
+        const jid =
+          msg.key.remoteJid;
+
+        const isGroup =
+          jid.endsWith("@g.us");
+
+        const pushName =
+          msg.pushName ||
+          "Soul";
+
+        const user =
+          getUser(
+            sender,
+            pushName
+          );
+
+        const prefix =
+          getPrefix();
+
+        let commandText =
+          text.trim();
+
+        if (
+          commandText.startsWith(prefix)
+        ) {
+          commandText =
+            commandText.slice(
+              prefix.length
+            ).trim();
+        }
+
+        if (!commandText) {
+          return;
+        }
+
+        const parts =
+          commandText.split(/\s+/);
+
+        const cmd =
+          parts.shift()?.toLowerCase();
+
+        const args =
+          parts;
+
+        if (!cmd) {
+          return;
+        }
+
+        await runCommand(
+          sock,
+          msg,
+          cmd,
+          args,
+          user,
+          sender,
+          isGroup
+        );
+      } catch (error) {
+        console.error(
+          "Message handler error:",
+          error
+        );
+      }
+    }
+  );
+
+  if (
+    !state.creds.registered &&
+    process.env.PHONE_NUMBER
+  ) {
+    try {
+      await new Promise(
+        resolve =>
+          setTimeout(
+            resolve,
+            3000
+          )
+      );
+
+      const phone =
+        normalizeNumber(
+          process.env.PHONE_NUMBER
+        );
+
+      console.log(
+        "Requesting WhatsApp pairing code..."
+      );
+
+      const code =
+        await sock.requestPairingCode(
+          phone
+        );
+
+      console.log(
+        `🦇 PAIRING CODE: ${code}`
+      );
+      console.log(
+        "Open WhatsApp → Linked Devices → Link a Device → Link with phone number instead."
+      );
+    } catch (error) {
+      console.error(
+        "Pairing code error:",
+        error
+      );
+    }
+  }
+}
+
+startBot().catch(
+  console.error
+);
