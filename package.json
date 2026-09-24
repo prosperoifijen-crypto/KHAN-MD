@@ -1,16 +1,16 @@
 {
-  "name": "KHAN-MD",
-  "version": "15.0.0",
+  "name": "the-reaper",
+  "version": "1.0.0",
   "type": "module",
-  "description": "A WhatsApp Bot Created By JawadTechX",
+  "description": "The Reaper - WhatsApp Bot",
   "main": "index.js",
-   "scripts": {
-    "start": "pm2 start index.js --deep-monitoring --attach --name KHAN-MD",
-    "stop": "pm2 stop KHAN-MD",
-    "restart": "pm2 restart KHAN-MD"
+  "scripts": {
+    "start": "node index.js",
+    "stop": "echo \"Use Railway to stop the service\"",
+    "restart": "echo \"Use Railway to restart the service\""
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "github:WhiskeySockets/Baileys",
+    "@whiskeysockets/baileys": "6.7.23",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@vitalets/google-translate-api": "^9.2.1",
     "pino": "^9.7.0",
