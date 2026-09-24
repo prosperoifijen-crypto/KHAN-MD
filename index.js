@@ -302,3 +302,520 @@ const COMMANDS = {
 const ALL_COMMANDS = new Set(
   Object.values(COMMANDS).flat()
 );
+function buildMenu(user, includeUser) {
+  const prefix = getPrefix();
+
+  let out = `🦇 𝕿𝕳𝕰 𝕽𝕰𝕬𝕻𝕰𝕽
+
+👑 Owner: ${OWNER_NAME}
+🤖 Bot: ${BOT_NAME}
+⚡ Status: Online
+📶 Ping: ${prefix}ping`;
+
+  if (includeUser) {
+    out += `\n👤 User: ${user.name || "Soul"}`;
+  }
+
+  out += `\n
+━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+
+  for (const [category, commands] of Object.entries(COMMANDS)) {
+    out += `\n🦇 ${category}\n`;
+
+    out += commands
+      .map(command => `🦇 ${command}`)
+      .join("\n");
+
+    out += "\n";
+  }
+
+  out += `
+━━━━━━━━━━━━━━━━━━━━━━━━
+🦇 Motto: I don't chase death. Death knows where to find me.
+🦇 Status: THE REAPER HAS AWAKENED`;
+
+  return out;
+}
+
+function random(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+async function getGroupInfo(sock, jid) {
+  if (!jid.endsWith("@g.us")) return null;
+
+  try {
+    return await sock.groupMetadata(jid);
+  } catch {
+    return null;
+  }
+}
+
+function participantIsAdmin(metadata, jid) {
+  const participant = metadata?.participants?.find(
+    p => p.id === jid
+  );
+
+  return !!participant &&
+    (
+      participant.admin === "admin" ||
+      participant.admin === "superadmin"
+    );
+}
+
+async function requireGroup(sock, jid, msg) {
+  if (!jid.endsWith("@g.us")) {
+    await reply(
+      sock,
+      jid,
+      "🦇 This command only works in a group.",
+      msg
+    );
+
+    return null;
+  }
+
+  const metadata = await getGroupInfo(sock, jid);
+
+  if (!metadata) {
+    await reply(
+      sock,
+      jid,
+      "🦇 I could not read this group.",
+      msg
+    );
+
+    return null;
+  }
+
+  return metadata;
+}
+
+async function requireAdmin(sock, jid, sender, msg) {
+  const metadata = await requireGroup(sock, jid, msg);
+
+  if (!metadata) return null;
+
+  if (
+    !isOwner(sender) &&
+    !participantIsAdmin(metadata, sender)
+  ) {
+    await reply(
+      sock,
+      jid,
+      "🦇 Admin permission required.",
+      msg
+    );
+
+    return null;
+  }
+
+  return metadata;
+}
+
+async function sendMenu(
+  sock,
+  jid,
+  msg,
+  user,
+  includeUser
+) {
+  const text = buildMenu(user, includeUser);
+
+  if (
+    settings.menuImage &&
+    fs.existsSync(BANNER_FILE)
+  ) {
+    await sock.sendMessage(
+      jid,
+      {
+        image: fs.readFileSync(BANNER_FILE),
+        caption:
+          `🦇 ${BOT_NAME}\n` +
+          `⚡ THE REAPER HAS AWAKENED`
+      },
+      { quoted: msg }
+    );
+  }
+
+  await reply(
+    sock,
+    jid,
+    text,
+    msg
+  );
+}
+
+async function runCommand(
+  sock,
+  msg,
+  cmd,
+  args,
+  user,
+  sender,
+  isGroup
+) {
+  const jid = msg.key.remoteJid;
+  const lower = cmd.toLowerCase();
+
+  if (
+    lower === "menu" ||
+    lower === "commands" ||
+    lower === "help"
+  ) {
+    await sendMenu(
+      sock,
+      jid,
+      msg,
+      user,
+      !isOwner(sender)
+    );
+
+    return;
+  }
+
+  await react(
+    sock,
+    jid,
+    msg.key,
+    "🦇"
+  );
+
+  if (
+    lower === "reaper" ||
+    lower === "alive" ||
+    lower === "status"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 ${BOT_NAME}
+
+⚡ Status: Online
+🩸 The Reaper has awakened.
+☠️ ${formatUptime(process.uptime())}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "ping") {
+    const start = Date.now();
+
+    await reply(
+      sock,
+      jid,
+      "🦇 Pinging...",
+      msg
+    );
+
+    await reply(
+      sock,
+      jid,
+      `🦇 Pong: ${Date.now() - start} ms`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "owner") {
+    await reply(
+      sock,
+      jid,
+      `👑 Owner: ${OWNER_NAME}
+📱 ${ownerLink()}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "botinfo" ||
+    lower === "about" ||
+    lower === "version"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 ${BOT_NAME}
+
+Version: 2.0
+Baileys: 6.7.23
+Prefix: optional
+Commands: ${ALL_COMMANDS.size}+
+Motto: I don't chase death. Death knows where to find me.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "runtime" ||
+    lower === "uptime"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 Uptime: ${formatUptime(process.uptime())}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "jid" ||
+    lower === "chatid"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 JID: ${jid}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "prefix") {
+    await reply(
+      sock,
+      jid,
+      `🦇 Prefix: ${getPrefix()}
+🦇 Commands also work without a prefix.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "profile" ||
+    lower === "rank" ||
+    lower === "level" ||
+    lower === "xp" ||
+    lower === "coins"
+  ) {
+    updateRank(user);
+
+    await reply(
+      sock,
+      jid,
+      `🦇 𝕽𝕰𝕬𝕻𝕰𝕽 𝕻𝕽𝕺𝕱𝕴𝕷𝕰
+
+👤 ${user.name}
+☠️ Rank: ${user.rank}
+⚡ Level: ${user.level}
+🩸 XP: ${user.xp}/${neededForLevel(user.level)}
+🪙 Coins: ${user.coins}
+⚔️ Wins: ${user.wins}
+💀 Losses: ${user.losses}
+🔥 Streak: ${user.streak}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "daily" ||
+    lower === "claim"
+  ) {
+    const now = Date.now();
+
+    if (
+      now - user.lastDaily <
+      24 * 60 * 60 * 1000
+    ) {
+      const left =
+        24 * 60 * 60 * 1000 -
+        (now - user.lastDaily);
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Daily already claimed.
+Try again in ${Math.ceil(left / 3600000)}h.`,
+        msg
+      );
+
+      return;
+    }
+
+    user.lastDaily = now;
+    user.coins += 250;
+
+    addXP(
+      sender,
+      50,
+      user.name
+    );
+
+    await reply(
+      sock,
+      jid,
+      `🦇 Daily Reaper reward claimed.
+🪙 +250 coins
+⚡ +50 XP`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "hunt") {
+    const now = Date.now();
+
+    if (
+      now - user.lastHunt <
+      60 * 60 * 1000
+    ) {
+      await reply(
+        sock,
+        jid,
+        "🦇 The hunt is still cooling down. Try again later.",
+        msg
+      );
+
+      return;
+    }
+
+    user.lastHunt = now;
+
+    const reward =
+      Math.floor(Math.random() * 251) + 50;
+
+    user.coins += reward;
+
+    addXP(
+      sender,
+      Math.floor(reward / 5),
+      user.name
+    );
+
+    await reply(
+      sock,
+      jid,
+      `🦇 Reaper Hunt complete.
+🪙 You found ${reward} coins.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "dice") {
+    const roll =
+      Math.floor(Math.random() * 6) + 1;
+
+    user.coins += roll * 5;
+
+    addXP(
+      sender,
+      10,
+      user.name
+    );
+
+    await reply(
+      sock,
+      jid,
+      `🦇 Reaper Dice: ${roll}
+🪙 +${roll * 5} coins`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "coinflip") {
+    const result =
+      random(["HEADS", "TAILS"]);
+
+    addXP(
+      sender,
+      5,
+      user.name
+    );
+
+    await reply(
+      sock,
+      jid,
+      `🦇 Coin Flip: ${result}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "rps" ||
+    lower === "rockpaperscissors"
+  ) {
+    const choices = [
+      "rock",
+      "paper",
+      "scissors"
+    ];
+
+    const bot = random(choices);
+    const pick =
+      (args[0] || "").toLowerCase();
+
+    if (!choices.includes(pick)) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Use: rps rock | rps paper | rps scissors",
+        msg
+      );
+
+      return;
+    }
+
+    let result = "draw";
+
+    if (
+      (pick === "rock" &&
+        bot === "scissors") ||
+      (pick === "paper" &&
+        bot === "rock") ||
+      (pick === "scissors" &&
+        bot === "paper")
+    ) {
+      result = "win";
+    } else if (pick !== bot) {
+      result = "loss";
+    }
+
+    if (result === "win") {
+      user.wins++;
+      user.streak++;
+      user.coins += 50;
+
+      addXP(
+        sender,
+        25,
+        user.name
+      );
+    } else if (result === "loss") {
+      user.losses++;
+      user.streak = 0;
+    }
+
+    await reply(
+      sock,
+      jid,
+      `🦇 You: ${pick}
+🦇 Reaper: ${bot}
+
+Result: ${result.toUpperCase()}`,
+      msg
+    );
+
+    return;
+    }
