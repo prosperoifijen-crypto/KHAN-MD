@@ -125,7 +125,9 @@ async function startReaper() {
     async ({ messages }) => {
       const msg = messages[0];
 
-      if (!msg?.message || msg.key.fromMe) {
+      if (!msg?.message) {
+  return;
+      } 
         return;
       }
 
