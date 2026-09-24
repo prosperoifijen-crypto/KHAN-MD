@@ -251,28 +251,40 @@ Use:
 
 function buildMenu(user, includeUser) {
   const prefix = getPrefix();
-  let out = `🦇 𝕿𝕳𝕰 𝕽𝕰𝕬𝕻𝕰𝕽
 
-👑 Owner: ${OWNER_NAME}
-🤖 Bot: ${BOT_NAME}
-⚡ Status: Online
-📶 Ping: ${prefix}ping`;
+  let out =
+`*╔═━━━━━✦✦✦━━━━━━═❐*
+*┃ 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁 𝙼𝙳 🦇*
+*╚═━━━━━✦✦✦━━━━━━═❐*
 
-  if (includeUser) out += `\n👤 User: ${user.name || "Soul"}`;
+*╔═━━━━━━━━━━━━━━━━━❐*
+*┃ 🦇│ 𝙾𝚆𝙽𝙴𝚁: ${OWNER_NAME} ☠️*
+*┃ 🦇│ 𝚅𝙴𝚁𝚂𝙸𝙾𝙽: ${BOT_NAME}*
+*┃ 🦇│ 𝚄𝚂𝙴𝚁: ${user?.name || "Soul"}*
+*┃ 🦇│ 𝙼𝙾𝙳𝙴: 🌍 𝙿𝚄𝙱𝙻𝙸𝙲*
+*┃ 🦇│ 𝙿𝚁𝙴𝙵𝙸𝚇: ${prefix}*
+*╚═━━━━━━━━━━━━━━━━━❐*
 
-  out += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+`;
 
   for (const [category, commands] of Object.entries(COMMANDS)) {
-    out += `\n🦇 ${category}\n`;
-    out += commands.map(c => `🦇 ${c}`).join("\n");
-    out += "\n";
+    out += `*┏━❐〔 🦇 ${category} 〕━━┈❐*\n`;
+
+    for (const command of commands) {
+      out += `*┃ 🦇│ ${prefix}${command}*\n`;
+    }
+
+    out += `*┗━━━━━━━━━━━━━━━━┈❐*\n\n`;
   }
 
-  out += `\n━━━━━━━━━━━━━━━━━━━━━━━━
-🦇 Motto: I don't chase death. Death knows where to find me.
-🦇 Status: THE REAPER HAS AWAKENED`;
+  out +=
+`⚙️ Powered by *${BOT_NAME}* 🦇
+*╔═━━━━━✦✦✦━━━━━━═❐*
+*┃ 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁 𝙷𝙰𝚂 𝙰𝚆𝙰𝙺𝙴𝙽 ☠️*
+*╚═━━━━━✦✦✦━━━━━━═❐*`;
 
   return out;
+
 }
 
 function random(arr) {
