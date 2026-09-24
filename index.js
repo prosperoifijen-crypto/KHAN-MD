@@ -8,7 +8,6 @@ import P from "pino";
 async function startReaper() {
   const { state, saveCreds } = await useMultiFileAuthState("auth");
 
-  // Get the current WhatsApp Web version
   let version;
 
   try {
@@ -16,6 +15,7 @@ async function startReaper() {
 
     if (result?.version) {
       version = result.version;
+
       console.log(
         "🌐 WhatsApp Web version:",
         version.join(".")
@@ -126,8 +126,6 @@ async function startReaper() {
       const msg = messages[0];
 
       if (!msg?.message) {
-  return;
-      } 
         return;
       }
 
@@ -136,8 +134,7 @@ async function startReaper() {
         msg.message.extendedTextMessage?.text ||
         "";
 
-      const command =
-        text.toLowerCase().trim();
+      const command = text.toLowerCase().trim();
 
       if (command === ".reaper") {
         await sock.sendMessage(
