@@ -819,3 +819,649 @@ Result: ${result.toUpperCase()}`,
 
     return;
     }
+  if (lower === "guess" || lower === "numberguess") {
+    const n = Math.floor(Math.random() * 10) + 1;
+    const guess = Number(args[0]);
+
+    if (
+      !Number.isInteger(guess) ||
+      guess < 1 ||
+      guess > 10
+    ) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Guess a number from 1 to 10.\nExample: guess 7",
+        msg
+      );
+      return;
+    }
+
+    if (guess === n) {
+      user.coins += 100;
+
+      addXP(
+        sender,
+        40,
+        user.name
+      );
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Correct. The number was ${n}.
+🪙 +100 coins`,
+        msg
+      );
+    } else {
+      addXP(
+        sender,
+        5,
+        user.name
+      );
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Wrong. The number was ${n}.`,
+        msg
+      );
+    }
+
+    return;
+  }
+
+  if (
+    lower === "work" ||
+    lower === "crime" ||
+    lower === "rob"
+  ) {
+    const rewards = {
+      work: [80, 220],
+      crime: [120, 350],
+      rob: [50, 400]
+    };
+
+    const [min, max] =
+      rewards[lower];
+
+    const amount =
+      Math.floor(
+        Math.random() *
+        (max - min + 1)
+      ) + min;
+
+    if (
+      lower === "rob" &&
+      Math.random() < 0.35
+    ) {
+      const loss = Math.min(
+        user.coins,
+        Math.floor(amount / 2)
+      );
+
+      user.coins -= loss;
+
+      await reply(
+        sock,
+        jid,
+        `🦇 The robbery failed.
+🪙 -${loss} coins`,
+        msg
+      );
+    } else {
+      user.coins += amount;
+
+      addXP(
+        sender,
+        15,
+        user.name
+      );
+
+      await reply(
+        sock,
+        jid,
+        `🦇 ${lower.toUpperCase()} complete.
+🪙 +${amount} coins`,
+        msg
+      );
+    }
+
+    return;
+  }
+
+  if (
+    lower === "balance" ||
+    lower === "wallet" ||
+    lower === "economy"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 ${user.name}'s wallet
+🪙 Coins: ${user.coins}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "rich" ||
+    lower === "leaderboard"
+  ) {
+    const list =
+      Object.entries(users)
+        .sort(
+          (a, b) =>
+            (b[1].coins || 0) -
+            (a[1].coins || 0)
+        )
+        .slice(0, 10);
+
+    let text =
+      "🦇 REAPER LEADERBOARD\n\n";
+
+    list.forEach(
+      ([id, u], i) => {
+        text +=
+          `${i + 1}. ` +
+          `${u.name || id} — ` +
+          `${u.coins || 0} coins\n`;
+      }
+    );
+
+    await reply(
+      sock,
+      jid,
+      text,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "groupinfo") {
+    const metadata =
+      await requireGroup(
+        sock,
+        jid,
+        msg
+      );
+
+    if (!metadata) return;
+
+    await reply(
+      sock,
+      jid,
+      `🦇 GROUP INFO
+
+Name: ${metadata.subject}
+Members: ${metadata.participants.length}
+JID: ${jid}
+Description: ${metadata.desc || "None"}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (
+    lower === "admins" ||
+    lower === "members" ||
+    lower === "membercount" ||
+    lower === "groupid" ||
+    lower === "groupjid"
+  ) {
+    const metadata =
+      await requireGroup(
+        sock,
+        jid,
+        msg
+      );
+
+    if (!metadata) return;
+
+    if (lower === "membercount") {
+      await reply(
+        sock,
+        jid,
+        `🦇 Members: ${metadata.participants.length}`,
+        msg
+      );
+
+      return;
+    }
+
+    if (
+      lower === "groupid" ||
+      lower === "groupjid"
+    ) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Group JID: ${jid}`,
+        msg
+      );
+
+      return;
+    }
+
+    const admins =
+      metadata.participants.filter(
+        p => p.admin
+      );
+
+    if (lower === "admins") {
+      await sock.sendMessage(
+        jid,
+        {
+          text:
+            `🦇 ADMINS\n\n` +
+            (
+              admins
+                .map(
+                  (p, i) =>
+                    `${i + 1}. @${p.id.split("@")[0]}`
+                )
+                .join("\n") ||
+              "None"
+            ),
+          mentions:
+            admins.map(p => p.id)
+        },
+        { quoted: msg }
+      );
+    } else {
+      await reply(
+        sock,
+        jid,
+        `🦇 Members: ${metadata.participants.length}`,
+        msg
+      );
+    }
+
+    return;
+  }
+
+  if (
+    [
+      "tagall",
+      "hidetag",
+      "tagadmins",
+      "tagmembers"
+    ].includes(lower)
+  ) {
+    const metadata =
+      await requireAdmin(
+        sock,
+        jid,
+        sender,
+        msg
+      );
+
+    if (!metadata) return;
+
+    let participants =
+      metadata.participants;
+
+    if (lower === "tagadmins") {
+      participants =
+        participants.filter(
+          p => p.admin
+        );
+    }
+
+    if (lower === "tagmembers") {
+      participants =
+        participants.filter(
+          p => !p.admin
+        );
+    }
+
+    const mentions =
+      participants.map(
+        p => p.id
+      );
+
+    const text =
+      args.join(" ").trim() ||
+      "🦇 The Reaper calls.";
+
+    await sock.sendMessage(
+      jid,
+      {
+        text:
+          text +
+          "\n\n" +
+          mentions
+            .map(
+              x =>
+                `@${x.split("@")[0]}`
+            )
+            .join(" "),
+        mentions
+      },
+      { quoted: msg }
+    );
+
+    return;
+  }
+
+  if (
+    [
+      "open",
+      "close",
+      "lock",
+      "unlock"
+    ].includes(lower)
+  ) {
+    const metadata =
+      await requireAdmin(
+        sock,
+        jid,
+        sender,
+        msg
+      );
+
+    if (!metadata) return;
+
+    const announcement =
+      lower === "close" ||
+      lower === "lock";
+
+    try {
+      await sock.groupSettingUpdate(
+        jid,
+        announcement
+          ? "announcement"
+          : "not_announcement"
+      );
+
+      await reply(
+        sock,
+        jid,
+        `🦇 Group is now ${
+          announcement
+            ? "closed to members"
+            : "open to members"
+        }.`,
+        msg
+      );
+    } catch {
+      await reply(
+        sock,
+        jid,
+        "🦇 I need group admin permission to change the group setting.",
+        msg
+      );
+    }
+
+    return;
+  }
+
+  if (
+    [
+      "setgroupname",
+      "setgroupdesc"
+    ].includes(lower)
+  ) {
+    const metadata =
+      await requireAdmin(
+        sock,
+        jid,
+        sender,
+        msg
+      );
+
+    if (!metadata) return;
+
+    const value =
+      args.join(" ").trim();
+
+    if (!value) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Usage: ${lower} <text>`,
+        msg
+      );
+
+      return;
+    }
+
+    try {
+      if (lower === "setgroupname") {
+        await sock.groupUpdateSubject(
+          jid,
+          value
+        );
+      } else {
+        await sock.groupUpdateDescription(
+          jid,
+          value
+        );
+      }
+
+      await reply(
+        sock,
+        jid,
+        "🦇 Group updated.",
+        msg
+      );
+    } catch {
+      await reply(
+        sock,
+        jid,
+        "🦇 WhatsApp denied the group update. Make sure I am an admin.",
+        msg
+      );
+    }
+
+    return;
+  }
+
+  if (
+    [
+      "add",
+      "remove",
+      "kick",
+      "promote",
+      "demote",
+      "warn",
+      "clearwarn",
+      "mute",
+      "unmute",
+      "invite",
+      "revoke"
+    ].includes(lower)
+  ) {
+    const metadata =
+      await requireAdmin(
+        sock,
+        jid,
+        sender,
+        msg
+      );
+
+    if (!metadata) return;
+
+    const targets = [
+      ...getMentionedJids(msg)
+    ];
+
+    if (!targets.length) {
+      const replyJid =
+        getReplyJid(msg);
+
+      if (replyJid) {
+        targets.push(replyJid);
+      }
+    }
+
+    if (
+      !targets.length &&
+      args[0]
+    ) {
+      const n =
+        normalizeNumber(args[0]);
+
+      if (n) {
+        targets.push(
+          `${n}@s.whatsapp.net`
+        );
+      }
+    }
+
+    try {
+      if (lower === "add") {
+        await sock.groupParticipantsUpdate(
+          jid,
+          targets,
+          "add"
+        );
+      }
+
+      else if (
+        lower === "remove" ||
+        lower === "kick"
+      ) {
+        await sock.groupParticipantsUpdate(
+          jid,
+          targets,
+          "remove"
+        );
+      }
+
+      else if (lower === "promote") {
+        await sock.groupParticipantsUpdate(
+          jid,
+          targets,
+          "promote"
+        );
+      }
+
+      else if (lower === "demote") {
+        await sock.groupParticipantsUpdate(
+          jid,
+          targets,
+          "demote"
+        );
+      }
+
+      else if (lower === "revoke") {
+        const code =
+          await sock.groupRevokeInvite(
+            jid
+          );
+
+        await reply(
+          sock,
+          jid,
+          `🦇 Invite revoked.
+New invite:
+https://chat.whatsapp.com/${code}`,
+          msg
+        );
+
+        return;
+      }
+
+      else if (lower === "invite") {
+        const code =
+          await sock.groupInviteCode(
+            jid
+          );
+
+        await reply(
+          sock,
+          jid,
+          `🦇 Group invite:
+https://chat.whatsapp.com/${code}`,
+          msg
+        );
+
+        return;
+      }
+
+      else {
+        await reply(
+          sock,
+          jid,
+          `🦇 ${lower} command recognized.`,
+          msg
+        );
+
+        return;
+      }
+
+      await reply(
+        sock,
+        jid,
+        `🦇 ${lower} completed.`,
+        msg
+      );
+    } catch {
+      await reply(
+        sock,
+        jid,
+        "🦇 WhatsApp denied that action. Confirm that I am a group admin and the target is valid.",
+        msg
+      );
+    }
+
+    return;
+  }
+
+  if (lower === "hijack") {
+    const metadata =
+      await requireAdmin(
+        sock,
+        jid,
+        sender,
+        msg
+      );
+
+    if (!metadata) return;
+
+    await reply(
+      sock,
+      jid,
+      `🦇 REAPER TAKEOVER MODE
+
+Authorized mode enabled.
+
+I will only perform group actions that WhatsApp permits for my account.
+
+I cannot bypass WhatsApp admin permissions.`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "gcstatus") {
+    const metadata =
+      await requireAdmin(
+        sock,
+        jid,
+        sender,
+        msg
+      );
+
+    if (!metadata) return;
+
+    const text =
+      args.join(" ").trim() ||
+      "🦇 THE REAPER HAS AWAKENED.";
+
+    await reply(
+      sock,
+      jid,
+      `🦇 Group status message:
+${text}`,
+      msg
+    );
+
+    return;
+      }
