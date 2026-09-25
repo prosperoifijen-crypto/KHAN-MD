@@ -6,7 +6,7 @@ import makeWASocket, {
 import P from "pino";
 import fs from "fs";
 import path from "path";
-
+import ytDlp from "yt-dlp-exec";
 const BOT_NAME = "THE REAPER";
 const OWNER_NAME = "Reaper";
 const DEFAULT_PREFIX = ".";
