@@ -1250,3 +1250,1225 @@ const COMMANDS = {
     "goodbye",
     "setwelcome",
    
+/* =========================================================
+   COMMAND ENGINE — BLOCK 2
+   ========================================================= */
+
+/* =========================================================
+   GENERAL COMMANDS
+   ========================================================= */
+
+async function runGeneralCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  user,
+  sender,
+  jid
+) {
+  const prefix = getPrefix();
+
+  if (
+    lower === "reaper" ||
+    lower === "alive" ||
+    lower === "status"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "THE REAPER",
+        `┃ ⚡ Status: ONLINE
+┃ ☠️ State: AWAKENED
+┃ 🌐 Mode: ${getModeDisplay()}
+┃ ⏱️ Uptime: ${formatUptime(process.uptime())}
+┃ 🩸 Souls: ${Object.keys(users).length}`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "ping") {
+    const started = Date.now();
+
+    await reply(
+      sock,
+      jid,
+      "🦇 *REAPER PING*\n\n⚡ Measuring response...",
+      msg
+    );
+
+    const latency =
+      Date.now() - started;
+
+    await reply(
+      sock,
+      jid,
+      `🦇 *PONG*\n\n⚡ Response: ${latency} ms\n☠️ Status: ONLINE`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "botinfo" ||
+    lower === "about" ||
+    lower === "version"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "BOT INFORMATION",
+        `┃ 🦇 Name: ${BOT_NAME}
+┃ ⚡ Version: ${VERSION}
+┃ 👑 Owner: ${OWNER_NAME}
+┃ 📦 Baileys: 6.7.23
+┃ 🌐 Mode: ${getModeDisplay()}
+┃ ⌨️ Prefix: ${prefix}
+┃ 📚 Commands: ${ALL_COMMANDS.size}
+┃ ⏱️ Uptime: ${formatUptime(process.uptime())}`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "runtime" ||
+    lower === "uptime"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 *REAPER RUNTIME*\n\n⏱️ ${formatUptime(
+        process.uptime()
+      )}`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "owner") {
+    const ownerNumber =
+      getOwnerNumber();
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "OWNER",
+        `┃ 👑 ${OWNER_NAME}
+┃ 📱 ${
+          ownerNumber
+            ? `https://wa.me/${ownerNumber}`
+            : "PHONE_NUMBER is not configured"
+        }`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "jid" ||
+    lower === "chatid"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 *CHAT JID*\n\n\`${jid}\``,
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "prefix") {
+    await reply(
+      sock,
+      jid,
+      `🦇 *CURRENT PREFIX*\n\n${prefix}\n\nPrefix is optional for normal commands.`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "repo" ||
+    lower === "support"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperInfo(
+        lower === "repo"
+          ? "REPOSITORY"
+          : "SUPPORT",
+        lower === "repo"
+          ? "The Reaper source is maintained through the configured project repository."
+          : "Use the command system or contact the owner for support."
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "help" ||
+    lower === "commands"
+  ) {
+    const target =
+      args[0]?.toLowerCase();
+
+    if (
+      target &&
+      commandExists(target)
+    ) {
+      await reply(
+        sock,
+        jid,
+        reaperBox(
+          `HELP — ${target}`,
+          `┃ Category: ${findCategory(target)}
+┃ Usage: ${prefix}${target}
+┃ Cooldown: ${
+            COOLDOWNS[target] ??
+            COOLDOWNS.default
+          }ms`
+        ),
+        msg
+      );
+
+      return true;
+    }
+
+    await reply(
+      sock,
+      jid,
+      `🦇 *THE REAPER HELP*\n\n` +
+      `Use ${prefix}menu to see every command.\n\n` +
+      `Example:\n` +
+      `${prefix}profile\n` +
+      `${prefix}hunt\n` +
+      `${prefix}fight\n` +
+      `${prefix}dice\n` +
+      `${prefix}weather Lagos`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "profile") {
+    updateRank(user);
+
+    const progress =
+      Math.round(
+        (
+          user.xp /
+          neededForLevel(user.level)
+        ) * 100
+      );
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "REAPER PROFILE",
+        `┃ 👤 ${user.name}
+┃ ☠️ Rank: ${user.rank}
+┃ ⚡ Level: ${user.level}
+┃ 🩸 XP: ${user.xp}/${neededForLevel(user.level)}
+┃ 📊 Progress: ${progress}%
+┃ 🪙 Coins: ${formatNumber(user.coins)}
+┃ ⚔️ Wins: ${user.wins}
+┃ 💀 Losses: ${user.losses}
+┃ 🔥 Streak: ${user.streak}
+┃ 🏆 Achievements: ${user.achievements.length}`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "rank" ||
+    lower === "level" ||
+    lower === "xp" ||
+    lower === "coins"
+  ) {
+    updateRank(user);
+
+    let body;
+
+    if (lower === "rank") {
+      body =
+        `☠️ Rank: ${user.rank}\n` +
+        `⚡ Level: ${user.level}`;
+    } else if (lower === "level") {
+      body =
+        `⚡ Level: ${user.level}\n` +
+        `🩸 XP: ${user.xp}/${neededForLevel(user.level)}`;
+    } else if (lower === "xp") {
+      body =
+        `🩸 XP: ${user.xp}/${neededForLevel(user.level)}`;
+    } else {
+      body =
+        `🪙 Coins: ${formatNumber(user.coins)}`;
+    }
+
+    await reply(
+      sock,
+      jid,
+      `🦇 *REAPER STATS*\n\n${body}`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "daily" ||
+    lower === "claim"
+  ) {
+    const now = Date.now();
+
+    const cooldown =
+      24 * 60 * 60 * 1000;
+
+    if (
+      now - user.lastDaily <
+      cooldown
+    ) {
+      const remaining =
+        cooldown -
+        (now - user.lastDaily);
+
+      await reply(
+        sock,
+        jid,
+        `🦇 *DAILY ALREADY CLAIMED*\n\n⏳ Try again in ${formatDuration(
+          remaining
+        )}.`,
+        msg
+      );
+
+      return true;
+    }
+
+    user.lastDaily = now;
+
+    const reward =
+      Math.floor(
+        Math.random() * 201
+      ) + 300;
+
+    user.coins += reward;
+
+    const xpGain = 50;
+
+    const levelResult =
+      addXP(
+        sender,
+        xpGain,
+        user.name
+      );
+
+    const unlocked =
+      checkAchievements(user);
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "DAILY REWARD",
+        `🪙 +${formatNumber(reward)} coins
+⚡ +${xpGain} XP
+${
+  levelResult.levelsGained
+    ? `\n☠️ LEVEL UP! +${levelResult.levelsGained} level`
+    : ""
+}
+${
+  unlocked.length
+    ? `\n🏆 Achievement: ${unlocked.join(", ")}`
+    : ""
+}`
+      ),
+      msg
+    );
+
+    saveUsers();
+
+    return true;
+  }
+
+  if (lower === "hunt") {
+    const now = Date.now();
+
+    const cooldown =
+      60 * 60 * 1000;
+
+    if (
+      now - user.lastHunt <
+      cooldown
+    ) {
+      await reply(
+        sock,
+        jid,
+        `🩸 *HUNT COOLDOWN*\n\n⏳ Try again in ${formatDuration(
+          cooldown -
+          (now - user.lastHunt)
+        )}.`,
+        msg
+      );
+
+      return true;
+    }
+
+    user.lastHunt = now;
+    user.stats.hunts++;
+
+    const reward =
+      Math.floor(
+        Math.random() * 451
+      ) + 50;
+
+    const xp =
+      Math.floor(
+        reward / 5
+      );
+
+    user.coins += reward;
+
+    const result =
+      addXP(
+        sender,
+        xp,
+        user.name
+      );
+
+    const unlocked =
+      checkAchievements(user);
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "REAPER HUNT",
+        `🎯 Hunt completed.
+🪙 Loot: +${reward} coins
+⚡ XP: +${xp}
+${
+  result.levelsGained
+    ? `☠️ Level Up: +${result.levelsGained}`
+    : ""
+}
+${
+  unlocked.length
+    ? `🏆 ${unlocked.join(", ")}`
+    : ""
+}`
+      ),
+      msg
+    );
+
+    saveUsers();
+
+    return true;
+  }
+
+  if (
+    lower === "balance" ||
+    lower === "wallet" ||
+    lower === "economy"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "SOUL ECONOMY",
+        `┃ 👤 ${user.name}
+┃ 🪙 Coins: ${formatNumber(user.coins)}
+┃ 🎒 Items: ${user.inventory.length}
+┃ ⚔️ Wins: ${user.wins}
+┃ 💀 Losses: ${user.losses}`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  return false;
+}
+
+/* =========================================================
+   ECONOMY COMMANDS
+   ========================================================= */
+
+async function runEconomyCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  user,
+  sender,
+  jid
+) {
+  if (
+    lower === "work" ||
+    lower === "crime" ||
+    lower === "rob"
+  ) {
+    const cooldowns = {
+      work: 30 * 60 * 1000,
+      crime: 45 * 60 * 1000,
+      rob: 60 * 60 * 1000
+    };
+
+    const lastKey =
+      lower === "work"
+        ? "lastWork"
+        : lower === "crime"
+        ? "lastCrime"
+        : "lastRob";
+
+    const now = Date.now();
+
+    if (
+      now - user[lastKey] <
+      cooldowns[lower]
+    ) {
+      await reply(
+        sock,
+        jid,
+        `🦇 *${lower.toUpperCase()} COOLDOWN*\n\n⏳ Try again in ${formatDuration(
+          cooldowns[lower] -
+          (now - user[lastKey])
+        )}.`,
+        msg
+      );
+
+      return true;
+    }
+
+    user[lastKey] = now;
+
+    let reward = 0;
+
+    if (lower === "work") {
+      reward =
+        Math.floor(
+          Math.random() * 201
+        ) + 100;
+
+      user.stats.work++;
+
+      user.coins += reward;
+
+      addXP(
+        sender,
+        25,
+        user.name
+      );
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "SOUL WORK",
+          `💼 Contract completed.
+🪙 +${reward} coins
+⚡ +25 XP`
+        ),
+        msg
+      );
+    }
+
+    if (lower === "crime") {
+      user.stats.crimes++;
+
+      if (
+        Math.random() < 0.35
+      ) {
+        const fine =
+          Math.min(
+            user.coins,
+            Math.floor(
+              Math.random() * 150
+            ) + 50
+          );
+
+        user.coins -= fine;
+
+        await reply(
+          sock,
+          jid,
+          reaperError(
+            `The operation failed.\n🪙 Fine: -${fine} coins`
+          ),
+          msg
+        );
+      } else {
+        reward =
+          Math.floor(
+            Math.random() * 401
+          ) + 150;
+
+        user.coins += reward;
+
+        addXP(
+          sender,
+          40,
+          user.name
+        );
+
+        await reply(
+          sock,
+          jid,
+          reaperSuccess(
+            "CRIME COMPLETE",
+            `💀 Operation successful.
+🪙 +${reward} coins
+⚡ +40 XP`
+          ),
+          msg
+        );
+      }
+    }
+
+    if (lower === "rob") {
+      const targetJid =
+        getMentionedJids(msg)[0] ||
+        getReplyJid(msg);
+
+      if (!targetJid) {
+        await reply(
+          sock,
+          jid,
+          `🦇 Tag or reply to the soul you want to rob.\n\nExample: ${getPrefix()}rob @user`,
+          msg
+        );
+
+        user[lastKey] = 0;
+
+        return true;
+      }
+
+      if (
+        targetJid === sender
+      ) {
+        await reply(
+          sock,
+          jid,
+          "🦇 You cannot rob yourself.",
+          msg
+        );
+
+        user[lastKey] = 0;
+
+        return true;
+      }
+
+      const target =
+        getUser(
+          targetJid,
+          "Soul"
+        );
+
+      if (
+        target.coins <= 0
+      ) {
+        await reply(
+          sock,
+          jid,
+          "🦇 That soul has no coins to steal.",
+          msg
+        );
+
+        return true;
+      }
+
+      if (
+        Math.random() < 0.45
+      ) {
+        const fine =
+          Math.min(
+            user.coins,
+            Math.floor(
+              Math.random() * 200
+            ) + 50
+          );
+
+        user.coins -= fine;
+
+        await reply(
+          sock,
+          jid,
+          reaperError(
+            `The robbery failed.\n🪙 Fine: -${fine} coins`
+          ),
+          msg
+        );
+      } else {
+        const stolen =
+          Math.min(
+            target.coins,
+            Math.floor(
+              target.coins * 0.25
+            ) + 1
+          );
+
+        target.coins -= stolen;
+        user.coins += stolen;
+
+        addXP(
+          sender,
+          50,
+          user.name
+        );
+
+        saveUsers();
+
+        await reply(
+          sock,
+          jid,
+          reaperSuccess(
+            "ROBBERY SUCCESS",
+            `☠️ Target: @${targetJid.split("@")[0]}
+🪙 Stolen: ${stolen} coins
+⚡ +50 XP`
+          ),
+          msg
+        );
+      }
+    }
+
+    saveUsers();
+
+    return true;
+  }
+
+  if (
+    lower === "give" ||
+    lower === "pay"
+  ) {
+    const targetJid =
+      getMentionedJids(msg)[0] ||
+      getReplyJid(msg);
+
+    const amount =
+      Number(args[0]);
+
+    if (!targetJid) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Usage: ${getPrefix()}${lower} <amount> @user`,
+        msg
+      );
+
+      return true;
+    }
+
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Enter a valid coin amount.",
+        msg
+      );
+
+      return true;
+    }
+
+    if (
+      targetJid === sender
+    ) {
+      await reply(
+        sock,
+        jid,
+        "🦇 You cannot transfer coins to yourself.",
+        msg
+      );
+
+      return true;
+    }
+
+    if (
+      user.coins < amount
+    ) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Insufficient coins.",
+        msg
+      );
+
+      return true;
+    }
+
+    const target =
+      getUser(
+        targetJid,
+        "Soul"
+      );
+
+    user.coins -= amount;
+    target.coins += amount;
+
+    saveUsers();
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "SOUL TRANSFER",
+        `👤 From: ${user.name}
+👤 To: @${targetJid.split("@")[0]}
+🪙 Amount: ${formatNumber(amount)}`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "rich" ||
+    lower === "leaderboard"
+  ) {
+    const ranking =
+      Object.entries(users)
+        .sort(
+          (a, b) =>
+            (b[1].coins || 0) -
+            (a[1].coins || 0)
+        )
+        .slice(0, 10);
+
+    let output =
+      "╔═══〔 🪙 SOUL LEADERBOARD 〕═══╗\n\n";
+
+    ranking.forEach(
+      ([id, soul], index) => {
+        output +=
+          `${index + 1}. ${
+            soul.name || "Soul"
+          } — ${formatNumber(
+            soul.coins
+          )} coins\n`;
+      }
+    );
+
+    output +=
+      "\n╚══════════════════════╝";
+
+    await reply(
+      sock,
+      jid,
+      output,
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "inventory") {
+    if (!user.inventory.length) {
+      await reply(
+        sock,
+        jid,
+        "🎒 *INVENTORY*\n\nYour inventory is empty.",
+        msg
+      );
+
+      return true;
+    }
+
+    const items =
+      user.inventory
+        .map(
+          item =>
+            `• ${item.name} × ${item.quantity}`
+        )
+        .join("\n");
+
+    await reply(
+      sock,
+      jid,
+      `🎒 *REAPER INVENTORY*\n\n${items}`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "shop") {
+    await reply(
+      sock,
+      jid,
+      `╔═══〔 🛒 SOUL SHOP 〕═══╗
+
+1. 🗡️ Reaper Blade — 500
+2. 🛡️ Shadow Armor — 750
+3. 🩸 Blood Potion — 250
+4. 💎 Soul Crystal — 1,500
+
+Use:
+${getPrefix()}buy blade
+${getPrefix()}buy armor
+${getPrefix()}buy potion
+${getPrefix()}buy crystal
+
+╚══════════════════════╝`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "buy") {
+    const item =
+      String(args[0] || "")
+        .toLowerCase();
+
+    const shop = {
+      blade: {
+        name: "Reaper Blade",
+        price: 500
+      },
+
+      armor: {
+        name: "Shadow Armor",
+        price: 750
+      },
+
+      potion: {
+        name: "Blood Potion",
+        price: 250
+      },
+
+      crystal: {
+        name: "Soul Crystal",
+        price: 1500
+      }
+    };
+
+    const selected =
+      shop[item];
+
+    if (!selected) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Use ${getPrefix()}shop to view available items.`,
+        msg
+      );
+
+      return true;
+    }
+
+    if (
+      user.coins <
+      selected.price
+    ) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Insufficient coins.\n\nPrice: ${selected.price}\nYour coins: ${user.coins}`,
+        msg
+      );
+
+      return true;
+    }
+
+    user.coins -=
+      selected.price;
+
+    addInventoryItem(
+      sender,
+      selected.name,
+      1,
+      user.name
+    );
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "PURCHASE COMPLETE",
+        `🛒 Item: ${selected.name}
+🪙 Price: ${selected.price}
+🪙 Remaining: ${user.coins}`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "item"
+  ) {
+    const item =
+      args.join(" ")
+        .trim();
+
+    if (!item) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Usage: ${getPrefix()}item <name>`,
+        msg
+      );
+
+      return true;
+    }
+
+    const found =
+      user.inventory.find(
+        x =>
+          x.name
+            .toLowerCase()
+            .includes(
+              item.toLowerCase()
+            )
+      );
+
+    if (!found) {
+      await reply(
+        sock,
+        jid,
+        "🦇 That item is not in your inventory.",
+        msg
+      );
+
+      return true;
+    }
+
+    await reply(
+      sock,
+      jid,
+      `🎒 *ITEM*\n\n${found.name}\nQuantity: ${found.quantity}`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "weekly" ||
+    lower === "monthly"
+  ) {
+    const key =
+      lower === "weekly"
+        ? "lastWeekly"
+        : "lastMonthly";
+
+    const cooldown =
+      lower === "weekly"
+        ? 7 * 86400000
+        : 30 * 86400000;
+
+    const reward =
+      lower === "weekly"
+        ? 1500
+        : 5000;
+
+    const now = Date.now();
+
+    if (
+      now - user[key] <
+      cooldown
+    ) {
+      await reply(
+        sock,
+        jid,
+        `🦇 ${lower.toUpperCase()} reward already claimed.\n\n⏳ Try again in ${formatDuration(
+          cooldown -
+          (now - user[key])
+        )}.`,
+        msg
+      );
+
+      return true;
+    }
+
+    user[key] = now;
+    user.coins += reward;
+
+    addXP(
+      sender,
+      lower === "weekly"
+        ? 100
+        : 250,
+      user.name
+    );
+
+    saveUsers();
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        `${lower.toUpperCase()} REWARD`,
+        `🪙 +${formatNumber(reward)} coins
+⚡ XP awarded`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "deposit" ||
+    lower === "withdraw"
+  ) {
+    await reply(
+      sock,
+      jid,
+      "🦇 Wallet banking is handled through your Reaper coin balance. Use balance, give, buy and sell for the active economy.",
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "sell") {
+    const item =
+      args.join(" ")
+        .trim();
+
+    const found =
+      user.inventory.find(
+        x =>
+          x.name
+            .toLowerCase()
+            .includes(
+              item.toLowerCase()
+            )
+      );
+
+    if (!found) {
+      await reply(
+        sock,
+        jid,
+        "🦇 Item not found in your inventory.",
+        msg
+      );
+
+      return true;
+    }
+
+    const value = 100;
+
+    removeInventoryItem(
+      sender,
+      found.name,
+      1
+    );
+
+    user.coins += value;
+
+    saveUsers();
+
+    await reply(
+      sock,
+      jid,
+      `🦇 *ITEM SOLD*\n\n${found.name}\n🪙 +${value} coins`,
+      msg
+    );
+
+    return true;
+  }
+
+  return false;
+}
+
+/* =========================================================
+   FUN & SOCIAL
+   ========================================================= */
+
+async function runFunCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  user,
+  sender,
+  jid
+) {
+  if (lower === "quote") {
+    await reply(
+      sock,
+      jid,
+      `🦇 *REAPER QUOTE*\n\n“${random(
+        QUOTES
+      )}”`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "joke") {
+    await reply(
+      sock,
+      jid,
+      `😂 *REAPER JOKE*\n\n${random(
+        JOKES
+      )}`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "roast" ||
+    lower === "roastme"
+  ) {
+    const target =
+      args.join(" ").trim();
+
+    await reply(
+      sock,
+      jid,
+      `🔥 *REAPER ROAST*\n\n${
+        target
+          ? `${target}: `
+          : ""
+      }${random(ROASTS)}`,
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "compliment"
+  ) {
+    await reply(
+      sock,
+      jid,
+      `🦇 *REAPER COMPLIMENT*\n\n${random(
+        COMPLIMENTS
+      )}`,
+      ms
