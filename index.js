@@ -4591,6 +4591,971 @@ async function runCommand(
 
   if (protection) return;
 
-  // ----------------------------------------------------------
-  // DOWNLOADER
-  // -----------------------------------------------
+// ----------------------------------------------------------
+// DOWNLOADER
+// ----------------------------------------------------------
+
+if (
+DOWNLOAD_ALIASES.has(lower)
+) {
+await runDownloader(
+sock,
+msg,
+lower,
+args,
+jid
+);
+
+return;
+
+}
+
+// ----------------------------------------------------------
+// MEDIA
+// ----------------------------------------------------------
+
+const media =
+await runMediaCommand(
+sock,
+msg,
+lower,
+args,
+jid
+);
+
+if (media) return;
+
+// ----------------------------------------------------------
+// STORY
+// ----------------------------------------------------------
+
+const story =
+await runStoryCommand(
+sock,
+msg,
+lower,
+args,
+user,
+jid
+);
+
+if (story) return;
+
+// ----------------------------------------------------------
+// AI COMMANDS
+// ----------------------------------------------------------
+
+if (
+[
+"ai",
+"chat",
+"ask",
+"explain",
+"rewrite",
+"summarize",
+"translate"
+].includes(lower)
+) {
+await runAICommand(
+sock,
+msg,
+lower,
+args,
+jid
+);
+
+return;
+
+}
+
+// ----------------------------------------------------------
+// GENERAL COMMANDS
+// ----------------------------------------------------------
+
+if (
+typeof runGeneralCommand ===
+"function"
+) {
+const result =
+await runGeneralCommand(
+sock,
+msg,
+lower,
+args,
+user,
+sender,
+jid
+);
+
+if (result) return;
+
+}
+
+// ----------------------------------------------------------
+// ECONOMY
+// ----------------------------------------------------------
+
+if (
+typeof runEconomyCommand ===
+"function"
+) {
+const result =
+await runEconomyCommand(
+sock,
+msg,
+lower,
+args,
+user,
+sender,
+jid
+);
+
+if (result) return;
+
+}
+
+// ----------------------------------------------------------
+// FUN
+// ----------------------------------------------------------
+
+if (
+typeof runFunCommand ===
+"function"
+) {
+  const result =
+await runFunCommand(
+sock,
+msg,
+lower,
+args,
+user,
+sender,
+jid
+);
+
+if (result) return;
+
+}
+
+// ----------------------------------------------------------
+// GAMES
+// ----------------------------------------------------------
+
+if (
+typeof runGameCommand ===
+"function"
+) {
+const result =
+await runGameCommand(
+sock,
+msg,
+lower,
+args,
+user,
+sender,
+jid
+);
+
+if (result) return;
+
+}
+
+// ----------------------------------------------------------
+// BATTLE
+// ----------------------------------------------------------
+
+if (
+typeof runBattleCommand ===
+"function"
+) {
+const result =
+await runBattleCommand(
+sock,
+msg,
+lower,
+args,
+user,
+sender,
+jid
+);
+
+if (result) return;
+
+}
+
+// ----------------------------------------------------------
+// ACTIVE GAME
+// ----------------------------------------------------------
+
+if (
+typeof handleActiveGame ===
+"function"
+) {
+const result =
+await handleActiveGame(
+sock,
+msg,
+lower,
+args,
+user,
+sender,
+jid
+);
+
+if (result) return;
+
+}
+
+// ----------------------------------------------------------
+// UNKNOWN
+// ----------------------------------------------------------
+
+await reply(
+sock,
+jid,
+reaperError(
+"UNKNOWN COMMAND",
+Command *${lower}* could not be processed.\nUse *${getPrefix()}menu* to view commands.
+),
+msg
+);
+}
+
+// ============================================================
+// WELCOME / GOODBYE EVENTS
+// ============================================================
+
+async function handleGroupParticipantsUpdate(
+sock,
+update
+) {
+const jid =
+update.id;
+
+if (
+!jid ||
+!jid.endsWith("@g.us")
+) {
+return;
+}
+
+const group =
+ensureGroupSettings(jid);
+
+if (
+!group.welcome &&
+!group.goodbye
+) {
+return;
+}
+
+let metadata;
+
+try {
+metadata =
+await sock.groupMetadata(jid);
+} catch {
+return;
+}
+
+for (
+const participant of
+update.participants || []
+) {
+const number =
+participant.split("@")[0];
+
+if (
+  update.action === "add" &&
+  group.welcome
+) {
+  const text =
+    String(
+      group.welcomeText ||
+      "🦇 Welcome @user to THE REAPER realm."
+    )
+    .replace(
+      /@user/g,
+      `@${number}`
+    );
+
+  await sock.sendMessage(
+    jid,
+    {
+      text,
+      mentions: [
+        participant
+      ]
+    }
+  );
+}
+
+if (
+  (
+    update.action === "remove" ||
+    update.action === "leave"
+  ) &&
+  group.goodbye
+) {
+  const text =
+    String(
+      group.goodbyeText ||
+      "☠️ @user has left the realm."
+    )
+    .replace(
+      /@user/g,
+      `@${number}`
+    );
+
+  await sock.sendMessage(
+    jid,
+    {
+      text,
+      mentions: [
+        participant
+      ]
+    }
+  );
+}
+
+}
+}
+
+// ============================================================
+// CALL PROTECTION
+// ============================================================
+
+async function handleIncomingCall(
+sock,
+call
+) {
+for (
+const item of
+call || []
+) {
+try {
+const caller =
+item.from;
+
+  if (!caller) continue;
+
+  const text =
+    "🛡️ *REAPER SECURITY*\n\nCalls are not accepted by THE REAPER.";
+
+  await sock.sendMessage(
+    caller,
+    {
+      text
+    }
+  );
+
+  if (
+    typeof sock.rejectCall ===
+    "function"
+  ) {
+    await sock.rejectCall(
+      item.id,
+      caller
+    );
+  }
+} catch {}
+
+}
+}
+
+// ============================================================
+// AUTOMATIC AI MESSAGE HANDLER
+// ============================================================
+
+async function handleAutomaticAI(
+sock,
+msg,
+text,
+jid
+) {
+if (!shouldTriggerAI(
+msg,
+sock,
+jid,
+text
+)) {
+return false;
+}
+
+// Explicit AI command is already handled
+// by the normal command router.
+const prefix =
+getPrefix();
+
+if (
+prefix &&
+text.trim().startsWith(prefix)
+) {
+return false;
+}
+
+let prompt =
+cleanAIInput(text);
+
+if (!prompt) {
+prompt =
+"The user mentioned THE REAPER. Respond naturally and ask what they need.";
+}
+
+try {
+const answer =
+await callOpenRouter(
+prompt
+);
+
+if (!answer) {
+  return false;
+}
+
+await reply(
+  sock,
+  jid,
+  reaperBox(
+    "☠️ REAPER AI",
+    answer
+  ),
+  msg
+);
+
+return true;
+
+} catch (err) {
+console.error(
+"Automatic AI error:",
+err?.message || err
+);
+
+return false;
+
+}
+}
+
+// ============================================================
+// FINAL BOT STARTUP
+// ============================================================
+
+async function startBot() {
+const {
+state,
+saveCreds
+} =
+await useMultiFileAuthState(
+"auth"
+);
+
+let version;
+
+try {
+const result =
+await fetchLatestWaWebVersion();
+
+if (
+  result?.version
+) {
+  version =
+    result.version;
+}
+
+} catch {}
+
+const sock =
+makeWASocket({
+auth: state,
+logger:
+P({
+level: "silent"
+}),
+printQRInTerminal: false,
+...(version
+? { version }
+: {})
+});
+
+sock.ev.on(
+"creds.update",
+saveCreds
+);
+
+let pairingRequested =
+false;
+
+// ----------------------------------------------------------
+// CONNECTION
+// ----------------------------------------------------------
+
+sock.ev.on(
+"connection.update",
+async ({
+connection,
+lastDisconnect
+}) => {
+if (
+connection === "connecting" &&
+!state.creds.registered &&
+!pairingRequested
+) {
+const phone =
+getOwnerNumber();
+
+    if (!phone) {
+      console.log(
+        "PHONE_NUMBER is missing in Railway Variables."
+      );
+      return;
+    }
+
+    pairingRequested =
+      true;
+
+    try {
+      await new Promise(
+        resolve =>
+          setTimeout(
+            resolve,
+            2500
+          )
+      );
+
+      const code =
+        await sock.requestPairingCode(
+          phone
+        );
+
+      console.log(
+        "\n=============================="
+      );
+      console.log(
+        "THE REAPER PAIRING CODE"
+      );
+      console.log(
+        code
+      );
+      console.log(
+        "==============================\n"
+      );
+    } catch (err) {
+      pairingRequested =
+        false;
+
+      console.error(
+        "Pairing code error:",
+        err?.message || err
+      );
+    }
+  }
+
+  if (
+    connection === "open"
+  ) {
+    console.log(
+      "🦇 THE REAPER HAS AWAKENED — CONNECTED"
+    );
+
+    console.log(
+      `Mode: ${getModeDisplay()}`
+    );
+
+    console.log(
+      `Prefix: ${getPrefix()}`
+    );
+
+    console.log(
+      `Commands: ${ALL_COMMANDS.size}`
+    );
+  }
+
+  if (
+    connection === "close"
+  ) {
+    const statusCode =
+      lastDisconnect
+        ?.error
+        ?.output
+        ?.statusCode;
+
+    console.log(
+      "WhatsApp connection closed:",
+      statusCode || "unknown"
+    );
+
+    if (
+      statusCode !==
+      DisconnectReason.loggedOut
+    ) {
+      setTimeout(
+        () => {
+          startBot().catch(
+            err =>
+              console.error(
+                "Reconnect failed:",
+                err
+              )
+          );
+        },
+        3000
+      );
+    } else {
+      console.log(
+        "Logged out. Remove the auth session only if you intentionally want to pair again."
+      );
+    }
+  }
+}
+
+);
+
+// ----------------------------------------------------------
+// GROUP PARTICIPANTS
+// ----------------------------------------------------------
+
+sock.ev.on(
+"group-participants.update",
+async update => {
+try {
+await handleGroupParticipantsUpdate(
+sock,
+update
+);
+} catch (err) {
+console.error(
+"Group participant error:",
+err?.message || err
+);
+}
+}
+);
+
+// ----------------------------------------------------------
+// CALLS
+// ----------------------------------------------------------
+
+sock.ev.on(
+"call",
+async call => {
+try {
+await handleIncomingCall(
+sock,
+call
+);
+} catch (err) {
+console.error(
+"Call handler error:",
+err?.message || err
+);
+}
+}
+);
+
+// ----------------------------------------------------------
+// MESSAGES
+// ----------------------------------------------------------
+
+sock.ev.on(
+"messages.upsert",
+async ({
+messages,
+type
+}) => {
+try {
+if (
+type !== "notify" &&
+type !== "append"
+) {
+return;
+}
+
+    const msg =
+      messages?.[0];
+
+    if (
+      !msg?.message
+    ) {
+      return;
+    }
+
+    const jid =
+      msg.key.remoteJid;
+
+    if (
+      !jid ||
+      jid ===
+        "status@broadcast"
+    ) {
+      return;
+    }
+
+    const sender =
+      jidFromMessage(msg);
+
+    const text =
+      getText(msg);
+
+    if (!text) {
+      return;
+    }
+
+    const user =
+      getUser(
+        sender,
+        msg.pushName ||
+          "Soul"
+      );
+
+    const trimmed =
+      text.trim();
+
+    // ------------------------------------------------------
+    // GROUP PROTECTION
+    // ------------------------------------------------------
+
+    if (
+      jid.endsWith("@g.us")
+    ) {
+      try {
+        const metadata =
+          await getGroupInfo(
+            sock,
+            jid
+          );
+
+        if (
+          metadata
+        ) {
+          const blocked =
+            await handleProtection(
+              sock,
+              msg,
+              jid,
+              sender,
+              text,
+              metadata
+            );
+
+          if (
+            blocked
+          ) {
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    // ------------------------------------------------------
+    // AUTOMATIC AI
+    // ------------------------------------------------------
+
+    const aiHandled =
+      await handleAutomaticAI(
+        sock,
+        msg,
+        text,
+        jid
+      );
+
+    if (
+      aiHandled
+    ) {
+      return;
+    }
+
+    // ------------------------------------------------------
+    // COMMAND PARSING
+    // ------------------------------------------------------
+
+    const prefix =
+      getPrefix();
+
+    let body =
+      trimmed;
+
+    if (
+      prefix &&
+      body.startsWith(
+        prefix
+      )
+    ) {
+      body =
+        body
+          .slice(prefix.length)
+          .trim();
+    } else {
+      // Commands without a prefix
+      // are accepted for menu/help.
+      if (
+        !prefix ||
+        !trimmed
+      ) {
+        return;
+      }
+
+      return;
+    }
+
+    if (!body) {
+      return;
+    }
+
+    const parts =
+      body.split(/\s+/);
+
+    const cmd =
+      parts
+        .shift()
+        .toLowerCase();
+
+    const args =
+      parts;
+
+    // ------------------------------------------------------
+    // COMMAND CHECK
+    // ------------------------------------------------------
+
+    if (
+      !ALL_COMMANDS.has(cmd) &&
+      cmd !== "mode"
+    ) {
+      await react(
+        sock,
+        jid,
+        msg.key,
+        "❌"
+      );
+
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "UNKNOWN COMMAND",
+          `*${cmd}* is not a THE REAPER command.\n\nUse *${prefix}menu* to view the command system.`
+        ),
+        msg
+      );
+
+      return;
+    }
+
+    // ------------------------------------------------------
+    // COOLDOWN
+    // ------------------------------------------------------
+
+    const remaining =
+      checkCommandCooldown(
+        jid,
+        cmd
+      );
+
+    if (
+      remaining > 0
+    ) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Slow down, Soul. Try again in *${remaining}s*.`,
+        msg
+      );
+
+      return;
+    }
+
+    // ------------------------------------------------------
+    // REACTION
+    // ------------------------------------------------------
+
+    await react(
+      sock,
+      jid,
+      msg.key,
+      "🦇"
+    );
+
+    // ------------------------------------------------------
+    // EXECUTE
+    // ------------------------------------------------------
+
+    await runCommand(
+      sock,
+      msg,
+      cmd,
+      args,
+      user,
+      sender,
+      jid.endsWith("@g.us")
+    );
+
+    saveUsers();
+  } catch (err) {
+    console.error(
+      "Message handler error:",
+      err
+    );
+
+    try {
+      const target =
+        messages?.[0]
+          ?.key
+          ?.remoteJid;
+
+      if (target) {
+        await reply(
+          sock,
+          target,
+          reaperError(
+            "SYSTEM ERROR",
+            "THE REAPER encountered an internal error while processing that command."
+          ),
+          messages[0]
+        );
+      }
+    } catch {}
+  }
+}
+
+);
+
+return sock;
+}
+
+// ============================================================
+// PROCESS SAFETY
+// ============================================================
+
+process.on(
+"uncaughtException",
+err => {
+console.error(
+"Uncaught exception:",
+err
+);
+}
+);
+
+process.on(
+"unhandledRejection",
+err => {
+console.error(
+"Unhandled rejection:",
+err
+);
+}
+);
+
+// ============================================================
+// START THE REAPER
+// ============================================================
+
+startBot().catch(
+err => {
+console.error(
+"Failed to start THE REAPER:",
+err
+);
+
+process.exit(1);
+
+}
+);
