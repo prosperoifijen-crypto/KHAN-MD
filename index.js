@@ -2468,3 +2468,1011 @@ async function runFunCommand(
         COMPLIMENTS
       )}`,
       ms
+      
+// ------------------------------------------------------------
+// GROUP DATABASE
+// ------------------------------------------------------------
+
+function ensureGroupSettings(jid) {
+  if (!settings.groups) settings.groups = {};
+
+  if (!settings.groups[jid]) {
+    settings.groups[jid] = {
+      welcome: settings.welcome,
+      goodbye: settings.goodbye,
+      welcomeText:
+        "🦇 Welcome @user to *THE REAPER* realm.",
+      goodbyeText:
+        "☠️ @user has left the realm.",
+      warnLimit: 3,
+      warnings: {},
+      muted: false,
+
+      antilink: false,
+      antibadword: false,
+      antispam: false,
+      antiflood: false,
+      antibot: false,
+      anticall: false,
+      antidelete: false,
+      antiedit: false,
+      antiviewonce: false,
+      antisticker: false,
+      antitag: false,
+      antimention: false,
+      antigroup: false,
+      antipromote: false,
+      protection: false,
+
+      badwords: [],
+      flood: {},
+      spam: {},
+
+      originalName: null,
+      originalDescription: null
+    };
+
+    saveSettings();
+  }
+
+  return settings.groups[jid];
+}
+
+function getGroupSettings(jid) {
+  return ensureGroupSettings(jid);
+}
+
+function groupSetting(jid, key, value) {
+  const group = ensureGroupSettings(jid);
+
+  if (typeof value === "undefined") {
+    return group[key];
+  }
+
+  group[key] = value;
+  saveSettings();
+  return value;
+}
+
+function groupSettingDisplay(value) {
+  return value ? "🟢 ON" : "🔴 OFF";
+}
+
+function getGroupMember(metadata, jid) {
+  return metadata?.participants?.find(
+    p => p.id === jid
+  );
+}
+
+function getBotJid(sock) {
+  return sock?.user?.id || "";
+}
+
+function isBotGroupAdmin(metadata, sock) {
+  return participantIsAdmin(
+    metadata,
+    getBotJid(sock)
+  );
+}
+
+async function requireBotAdmin(sock, jid, msg) {
+  const metadata = await getGroupInfo(sock, jid);
+
+  if (!metadata) {
+    await reply(
+      sock,
+      jid,
+      reaperError("GROUP ONLY", "Group information could not be loaded."),
+      msg
+    );
+    return null;
+  }
+
+  if (!isBotGroupAdmin(metadata, sock)) {
+    await reply(
+      sock,
+      jid,
+      reaperError(
+        "BOT ADMIN",
+        "THE REAPER must be a group administrator for this action."
+      ),
+      msg
+    );
+    return null;
+  }
+
+  return metadata;
+}
+
+function parseMentionTargets(metadata, args, sender) {
+  const result = [];
+
+  for (const arg of args) {
+    const clean = String(arg)
+      .replace("@", "")
+      .replace(/\D/g, "");
+
+    if (clean.length >= 7) {
+      const jid = `${clean}@s.whatsapp.net`;
+
+      if (
+        metadata?.participants?.some(
+          p => p.id === jid
+        )
+      ) {
+        result.push(jid);
+      }
+    }
+  }
+
+  if (!result.length && sender) {
+    result.push(sender);
+  }
+
+  return [...new Set(result)];
+}
+
+function mentionText(jids) {
+  return jids
+    .map(jid => `@${jid.split("@")[0]}`)
+    .join(" ");
+}
+
+async function sendMentions(sock, jid, text, mentions = [], quoted = null) {
+  return sock.sendMessage(
+    jid,
+    {
+      text,
+      mentions
+    },
+    quoted ? { quoted } : {}
+  );
+}
+
+// ------------------------------------------------------------
+// GROUP COMMANDS
+// ------------------------------------------------------------
+
+async function runGroupCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  sender,
+  jid
+) {
+  if (!jid.endsWith("@g.us")) {
+    await reply(
+      sock,
+      jid,
+      reaperError("GROUP ONLY", "This command can only be used inside a group."),
+      msg
+    );
+    return true;
+  }
+
+  const metadata = await getGroupInfo(sock, jid);
+
+  if (!metadata) {
+    await reply(
+      sock,
+      jid,
+      reaperError("GROUP ERROR", "Unable to read group information."),
+      msg
+    );
+    return true;
+  }
+
+  const group = ensureGroupSettings(jid);
+  const prefix = getPrefix();
+
+  // ----------------------------------------------------------
+  // INFORMATION
+  // ----------------------------------------------------------
+
+  if (lower === "groupinfo") {
+    const admins = metadata.participants.filter(
+      p => p.admin
+    ).length;
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "GROUP INFORMATION",
+        [
+          `▸ Name: ${metadata.subject || "Unknown"}`,
+          `▸ ID: ${jid}`,
+          `▸ Members: ${metadata.participants.length}`,
+          `▸ Admins: ${admins}`,
+          `▸ Owner: ${metadata.owner || "Unknown"}`,
+          `▸ Created: ${
+            metadata.creation
+              ? new Date(metadata.creation * 1000).toLocaleString()
+              : "Unknown"
+          }`
+        ].join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "members" ||
+    lower === "membercount"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperInfo(
+        "GROUP MEMBERS",
+        `Total members: *${metadata.participants.length}*`
+      ),
+      msg
+    );
+    return true;
+  }
+
+  if (
+    lower === "groupid" ||
+    lower === "groupjid"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "GROUP ID",
+        jid
+      ),
+      msg
+    );
+    return true;
+  }
+
+  if (lower === "groupname") {
+    await reply(
+      sock,
+      jid,
+      reaperInfo(
+        "GROUP NAME",
+        metadata.subject || "Unknown"
+      ),
+      msg
+    );
+    return true;
+  }
+
+  if (lower === "groupdesc") {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "GROUP DESCRIPTION",
+        metadata.desc || "No description."
+      ),
+      msg
+    );
+    return true;
+  }
+
+  if (lower === "admins") {
+    const admins = metadata.participants.filter(
+      p => p.admin
+    );
+
+    if (!admins.length) {
+      await reply(
+        sock,
+        jid,
+        reaperInfo("ADMINS", "No administrators detected."),
+        msg
+      );
+      return true;
+    }
+
+    const mentions = admins.map(p => p.id);
+
+    await sendMentions(
+      sock,
+      jid,
+      reaperBox(
+        "GROUP ADMINS",
+        admins
+          .map(
+            p =>
+              `☠️ @${p.id.split("@")[0]} ${
+                p.admin === "superadmin"
+                  ? "👑"
+                  : "🛡️"
+              }`
+          )
+          .join("\n")
+      ),
+      mentions,
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // GROUP NAME / DESCRIPTION
+  // ----------------------------------------------------------
+
+  if (
+    lower === "setgroupname" ||
+    lower === "setgroupdesc"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "ADMIN ONLY",
+          "Only group administrators can use this command."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    if (!isBotGroupAdmin(metadata, sock)) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "BOT ADMIN",
+          "Make THE REAPER an administrator first."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const value = args.join(" ").trim();
+
+    if (!value) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}${lower} <text>`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      if (lower === "setgroupname") {
+        await sock.groupUpdateSubject(
+          jid,
+          value
+        );
+      } else {
+        await sock.groupUpdateDescription(
+          jid,
+          value
+        );
+      }
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "GROUP UPDATED",
+          lower === "setgroupname"
+            ? `New name: *${value}*`
+            : `New description: *${value}*`
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "UPDATE FAILED",
+          err?.message || "WhatsApp rejected the change."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // ADD / REMOVE / KICK
+  // ----------------------------------------------------------
+
+  if (
+    lower === "add" ||
+    lower === "remove" ||
+    lower === "kick"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only group admins can do this."),
+        msg
+      );
+      return true;
+    }
+
+    const botMeta = await requireBotAdmin(
+      sock,
+      jid,
+      msg
+    );
+
+    if (!botMeta) return true;
+
+    const targets = getMentionedJids(msg);
+
+    if (!targets.length && args.length) {
+      for (const arg of args) {
+        const digits = String(arg).replace(/\D/g, "");
+
+        if (digits.length >= 7) {
+          targets.push(
+            `${digits}@s.whatsapp.net`
+          );
+        }
+      }
+    }
+
+    if (!targets.length) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}${lower} @user`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      const action =
+        lower === "add"
+          ? "add"
+          : "remove";
+
+      const result =
+        await sock.groupParticipantsUpdate(
+          jid,
+          [...new Set(targets)],
+          action
+        );
+
+      await sendMentions(
+        sock,
+        jid,
+        reaperSuccess(
+          "GROUP ACTION",
+          `${action.toUpperCase()} requested for:\n${mentionText(targets)}`
+        ),
+        targets,
+        msg
+      );
+
+      return true;
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "GROUP ACTION FAILED",
+          err?.message || "WhatsApp rejected the operation."
+        ),
+        msg
+      );
+      return true;
+    }
+  }
+
+  // ----------------------------------------------------------
+  // PROMOTE / DEMOTE
+  // ----------------------------------------------------------
+
+  if (
+    lower === "promote" ||
+    lower === "demote"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only group admins can do this."),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    let targets = getMentionedJids(msg);
+
+    if (!targets.length) {
+      targets = parseMentionTargets(
+        metadata,
+        args,
+        sender
+      );
+    }
+
+    try {
+      await sock.groupParticipantsUpdate(
+        jid,
+        targets,
+        lower === "promote"
+          ? "promote"
+          : "demote"
+      );
+
+      await sendMentions(
+        sock,
+        jid,
+        reaperSuccess(
+          lower === "promote"
+            ? "PROMOTION"
+            : "DEMOTION",
+          mentionText(targets)
+        ),
+        targets,
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "FAILED",
+          err?.message || "WhatsApp rejected the operation."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // WARNINGS
+  // ----------------------------------------------------------
+
+  if (
+    lower === "warn" ||
+    lower === "warnings" ||
+    lower === "clearwarn"
+  ) {
+    if (
+      lower === "warn" &&
+      !participantIsAdmin(metadata, sender)
+    ) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "ADMIN ONLY",
+          "Only administrators can issue warnings."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    let targets = getMentionedJids(msg);
+
+    if (!targets.length) {
+      targets = parseMentionTargets(
+        metadata,
+        args,
+        sender
+      );
+    }
+
+    const target = targets[0];
+
+    if (!target) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}${lower} @user`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const key = target;
+    group.warnings[key] =
+      Number(group.warnings[key] || 0);
+
+    if (lower === "warnings") {
+      await sendMentions(
+        sock,
+        jid,
+        reaperBox(
+          "WARNING STATUS",
+          `@${target.split("@")[0]}\nWarnings: *${group.warnings[key]} / ${group.warnLimit}*`
+        ),
+        [target],
+        msg
+      );
+      return true;
+    }
+
+    if (lower === "clearwarn") {
+      group.warnings[key] = 0;
+      saveSettings();
+
+      await sendMentions(
+        sock,
+        jid,
+        reaperSuccess(
+          "WARNINGS CLEARED",
+          `@${target.split("@")[0]} now has 0 warnings.`
+        ),
+        [target],
+        msg
+      );
+
+      return true;
+    }
+
+    group.warnings[key]++;
+    saveSettings();
+
+    const count = group.warnings[key];
+
+    await sendMentions(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ REAPER WARNING",
+        [
+          `Target: @${target.split("@")[0]}`,
+          `Warning: *${count}/${group.warnLimit}*`,
+          count >= group.warnLimit
+            ? "⚠️ Warning limit reached."
+            : "Further violations may trigger action."
+        ].join("\n")
+      ),
+      [target],
+      msg
+    );
+
+    if (
+      count >= group.warnLimit &&
+      participantIsAdmin(metadata, target) === false &&
+      isBotGroupAdmin(metadata, sock)
+    ) {
+      try {
+        await sock.groupParticipantsUpdate(
+          jid,
+          [target],
+          "remove"
+        );
+
+        group.warnings[key] = 0;
+        saveSettings();
+
+        await sendMentions(
+          sock,
+          jid,
+          `☠️ @${target.split("@")[0]} has reached the warning limit and was removed.`,
+          [target],
+          msg
+        );
+      } catch {}
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // TAGGING
+  // ----------------------------------------------------------
+
+  if (
+    lower === "tagall" ||
+    lower === "hidetag" ||
+    lower === "tagadmins" ||
+    lower === "tagmembers"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only group admins can use tagging controls."),
+        msg
+      );
+      return true;
+    }
+
+    let targets = [];
+
+    if (lower === "tagadmins") {
+      targets = metadata.participants
+        .filter(p => p.admin)
+        .map(p => p.id);
+    } else if (lower === "tagmembers") {
+      targets = metadata.participants
+        .filter(p => !p.admin)
+        .map(p => p.id);
+    } else {
+      targets = metadata.participants.map(
+        p => p.id
+      );
+    }
+
+    const text =
+      args.join(" ").trim() ||
+      "☠️ THE REAPER summons the realm.";
+
+    await sendMentions(
+      sock,
+      jid,
+      `${text}\n\n${mentionText(targets)}`,
+      targets,
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // OPEN / CLOSE
+  // LOCK / UNLOCK
+  // ----------------------------------------------------------
+
+  if (
+    lower === "open" ||
+    lower === "close" ||
+    lower === "lock" ||
+    lower === "unlock"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only group admins can change this."),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    try {
+      const adminsOnly =
+        lower === "close" ||
+        lower === "lock";
+
+      await sock.groupSettingUpdate(
+        jid,
+        adminsOnly
+          ? "announcement"
+          : "not_announcement"
+      );
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          lower === "close" || lower === "lock"
+            ? "GROUP LOCKED"
+            : "GROUP OPENED",
+          lower === "close" || lower === "lock"
+            ? "Only administrators can send messages."
+            : "All members can send messages."
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "SETTING FAILED",
+          err?.message || "WhatsApp rejected the group setting."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // MUTE / UNMUTE
+  // ----------------------------------------------------------
+
+  if (
+    lower === "mute" ||
+    lower === "unmute"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only administrators can mute the group."),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    try {
+      await sock.groupSettingUpdate(
+        jid,
+        lower === "mute"
+          ? "announcement"
+          : "not_announcement"
+      );
+
+      group.muted =
+        lower === "mute";
+
+      saveSettings();
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          lower === "mute"
+            ? "GROUP MUTED"
+            : "GROUP UNMUTED",
+          lower === "mute"
+            ? "Only admins can send messages."
+            : "Members can send messages again."
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "FAILED",
+          err?.message || "Unable to change group state."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // INVITE / REVOKE
+  // ----------------------------------------------------------
+
+  if (
+    lower === "invite" ||
+    lower === "revoke"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only administrators can manage invite links."),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    try {
+      if (lower === "revoke") {
+        const code =
+          await sock.groupRevokeInvite(jid);
+
+        await reply(
+          sock,
+          jid,
+          reaperSuccess(
+            "INVITE REVOKED",
+            "The previous group invite link is no longer valid."
+          ),
+          msg
+        );
+
+        return true;
+      }
+
+      const code =
+        await sock.groupInviteCode(jid);
+
+      await reply(
+        sock,
+        jid,
+        reaperBox(
+          "GROUP INVITE",
+          `https://chat.whatsapp.com/${code}`
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "INVITE ERROR",
+          err?.message || "Unable to access the invite."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // WELCOME / GOODBYE SETTINGS
+  // ----------------------------------------------------------
+
+  if (
+    lower === "welcome" ||
+    lower === "goodbye"
+  ) {
+    const key = lower;
+
+    if (
+      args[0] &&
+      ["on", "off"].includes(
+        args[0].toLowerCase()
+      )
+    ) {
+      if (!participantIsAdmin(metadata, sender)) {
+        await reply(
+          sock,
+          jid,
+          reaperError("ADMIN ONLY", "Only administrators can change this."),
+          msg
+        );
+        return true;
+      }
+
+      group[key] =
+        args[0].toLowerCase() === "on";
+
+      saveSettings();
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          `${key.toUpperCase()} UPDATED`,
+          `${key} is now ${groupSettingDisplay(group[key])}`
+        ),
+        msg
+      );
+
+      return true;
+    }
+
+    await reply(
+      sock,
+      jid,
+      reaperInfo(
+        key.toUpperCase(),
+        `${key}: ${groupSettingDisplay(group[key])}\n\nUse ${prefix}${key} on/off`
+    
