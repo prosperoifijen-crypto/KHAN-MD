@@ -7,6 +7,8 @@ import P from "pino";
 import fs from "fs";
 import path from "path";
 import ytDlp from "yt-dlp-exec";
+import QRCode from "qrcode";
+import googleTTS from "google-tts-api";
 const BOT_NAME = "THE REAPER";
 const OWNER_NAME = "Reaper";
 const DEFAULT_PREFIX = ".";
