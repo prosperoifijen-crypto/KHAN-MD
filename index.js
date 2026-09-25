@@ -5731,3 +5731,2081 @@ async function runStoryCommand(
 // ============================================================
 // BLOCK 3 END
 // ============================================================
+// ============================================================
+// THE REAPER — BLOCK 4/4
+// FINAL ROUTER • OWNER • EVENTS • AI AUTO-REPLY • CONNECTION
+// ============================================================
+
+// ------------------------------------------------------------
+// REQUIRED RUNTIME HELPERS
+// ------------------------------------------------------------
+
+const crypto = await import("crypto");
+
+async function downloadMediaMessage(...args) {
+  const baileys =
+    await import("@whiskeysockets/baileys");
+
+  return baileys.downloadMediaMessage(...args);
+}
+
+
+// ------------------------------------------------------------
+// COMMAND COOLDOWN
+// ------------------------------------------------------------
+
+const commandCooldowns =
+  globalThis.__REAPER_COMMAND_COOLDOWNS ||
+  new Map();
+
+globalThis.__REAPER_COMMAND_COOLDOWNS =
+  commandCooldowns;
+
+function getCommandCooldown(command) {
+  const fastCommands = new Set([
+    "ping",
+    "alive",
+    "runtime",
+    "jid",
+    "chatid",
+    "menu",
+    "help"
+  ]);
+
+  if (fastCommands.has(command)) {
+    return 700;
+  }
+
+  return Number(
+    settings.commandCooldown || 2000
+  );
+}
+
+function checkCommandCooldown(
+  jid,
+  command
+) {
+  const now = Date.now();
+  const key =
+    `${jid}:${command}`;
+
+  const last =
+    commandCooldowns.get(key) || 0;
+
+  const cooldown =
+    getCommandCooldown(command);
+
+  if (
+    now - last <
+    cooldown
+  ) {
+    return Math.ceil(
+      (cooldown -
+        (now - last)) /
+        1000
+    );
+  }
+
+  commandCooldowns.set(
+    key,
+    now
+  );
+
+  return 0;
+}
+
+
+// ------------------------------------------------------------
+// PUBLIC / PRIVATE MODE
+// ------------------------------------------------------------
+
+if (!settings.mode) {
+  settings.mode = "public";
+}
+
+if (!settings.commandCooldown) {
+  settings.commandCooldown = 2000;
+}
+
+function getBotMode() {
+  return settings.mode === "private"
+    ? "private"
+    : "public";
+}
+
+function isPrivateMode() {
+  return getBotMode() === "private";
+}
+
+function getModeDisplay() {
+  return isPrivateMode()
+    ? "🔒 PRIVATE"
+    : "🌍 PUBLIC";
+}
+
+function canUseBot(jid) {
+  if (!isPrivateMode()) {
+    return true;
+  }
+
+  return isOwner(jid);
+}
+
+function setBotMode(mode) {
+  const value =
+    String(mode || "")
+      .toLowerCase();
+
+  if (
+    value !== "public" &&
+    value !== "private"
+  ) {
+    return false;
+  }
+
+  settings.mode = value;
+  saveSettings();
+
+  return true;
+}
+
+
+// ------------------------------------------------------------
+// OWNER COMMANDS
+// ------------------------------------------------------------
+
+async function runOwnerCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  sender,
+  jid,
+  user
+) {
+  if (
+    ![
+      "owner",
+      "setprefix",
+      "setmenu",
+      "setmenuimage",
+      "setmenuaudio",
+      "addxp",
+      "addcoins",
+      "setrank",
+      "block",
+      "unblock",
+      "ban",
+      "unban",
+      "sudo",
+      "reload",
+      "cleansession",
+      "userstats",
+      "botsettings",
+      "broadcast",
+      "restart",
+      "shutdown",
+      "mode"
+    ].includes(lower)
+  ) {
+    return false;
+  }
+
+  // Owner information can be public.
+  if (lower === "owner") {
+    const owner =
+      getOwnerNumber();
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ THE REAPER",
+        [
+          `Owner: *${OWNER_NAME}*`,
+          `Number: *${owner || "Not configured"}*`,
+          `Mode: *${getModeDisplay()}*`,
+          "",
+          owner
+            ? `wa.me/${owner}`
+            : "Owner number unavailable."
+        ].join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (!isOwner(sender)) {
+    await reply(
+      sock,
+      jid,
+      reaperError(
+        "OWNER ONLY",
+        "This command is restricted to THE REAPER owner."
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // MODE
+  // ----------------------------------------------------------
+
+  if (lower === "mode") {
+    const mode =
+      args[0]?.toLowerCase();
+
+    if (!mode) {
+      await reply(
+        sock,
+        jid,
+        reaperBox(
+          "BOT MODE",
+          [
+            `Current mode: *${getModeDisplay()}*`,
+            "",
+            `Use ${getPrefix()}mode public`,
+            `Use ${getPrefix()}mode private`
+          ].join("\n")
+        ),
+        msg
+      );
+
+      return true;
+    }
+
+    if (!setBotMode(mode)) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "INVALID MODE",
+          "Choose public or private."
+        ),
+        msg
+      );
+
+      return true;
+    }
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "MODE UPDATED",
+        `THE REAPER is now *${getModeDisplay()}*.`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // PREFIX
+  // ----------------------------------------------------------
+
+  if (lower === "setprefix") {
+    const value =
+      args[0]?.trim();
+
+    if (!value) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${getPrefix()}setprefix <prefix>`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    settings.prefix =
+      value.slice(0, 3);
+
+    saveSettings();
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "PREFIX UPDATED",
+        `New prefix: *${settings.prefix}*`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // MENU SETTINGS
+  // ----------------------------------------------------------
+
+  if (lower === "setmenu") {
+    const value =
+      args.join(" ").trim();
+
+    if (!value) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${getPrefix()}setmenu <text>`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    settings.menuText =
+      value;
+
+    saveSettings();
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "MENU UPDATED",
+        "Menu text configuration saved."
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "setmenuimage"
+  ) {
+    const value =
+      args[0]?.toLowerCase();
+
+    if (
+      value !== "on" &&
+      value !== "off"
+    ) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${getPrefix()}setmenuimage on/off`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    settings.menuImage =
+      value === "on";
+
+    saveSettings();
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "MENU IMAGE",
+        `Menu image: ${groupSettingDisplay(settings.menuImage)}`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "setmenuaudio"
+  ) {
+    const value =
+      args[0]?.toLowerCase();
+
+    settings.menuAudio =
+      value === "on";
+
+    saveSettings();
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "MENU AUDIO",
+        `Menu audio: ${groupSettingDisplay(settings.menuAudio)}`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // USER MANAGEMENT
+  // ----------------------------------------------------------
+
+  if (
+    lower === "addxp" ||
+    lower === "addcoins" ||
+    lower === "setrank"
+  ) {
+    const target =
+      getMentionedJids(msg)[0] ||
+      getReplyJid(msg);
+
+    if (!target) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${getPrefix()}${lower} @user amount`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const targetUser =
+      getUser(
+        target,
+        target.split("@")[0]
+      );
+
+    const amount =
+      Number(args.find(x =>
+        /^\d+$/.test(x)
+      ));
+
+    if (
+      lower === "setrank"
+    ) {
+      const rank =
+        args
+          .filter(x =>
+            !/^\d+$/.test(x)
+          )
+          .join(" ")
+          .trim();
+
+      if (!rank) {
+        await reply(
+          sock,
+          jid,
+          reaperUsage(
+            `${getPrefix()}setrank @user <rank>`
+          ),
+          msg
+        );
+        return true;
+      }
+
+      targetUser.rank =
+        rank;
+
+      saveUsers();
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "RANK UPDATED",
+          `@${target.split("@")[0]} → *${rank}*`
+        ),
+        msg
+      );
+
+      return true;
+    }
+
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "INVALID AMOUNT",
+          "Enter a positive number."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    if (
+      lower === "addxp"
+    ) {
+      addXP(
+        targetUser,
+        amount
+      );
+    } else {
+      targetUser.coins =
+        Number(targetUser.coins || 0) +
+        amount;
+    }
+
+    saveUsers();
+
+    await sendMentions(
+      sock,
+      jid,
+      reaperSuccess(
+        "USER UPDATED",
+        [
+          `Target: @${target.split("@")[0]}`,
+          lower === "addxp"
+            ? `+${amount} XP`
+            : `+${amount} coins`
+        ].join("\n")
+      ),
+      [target],
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // USER STATS
+  // ----------------------------------------------------------
+
+  if (
+    lower === "userstats"
+  ) {
+    const target =
+      getMentionedJids(msg)[0] ||
+      getReplyJid(msg) ||
+      sender;
+
+    const targetUser =
+      getUser(
+        target,
+        target.split("@")[0]
+      );
+
+    await sendMentions(
+      sock,
+      jid,
+      reaperBox(
+        "USER STATS",
+        [
+          `User: @${target.split("@")[0]}`,
+          `Level: *${targetUser.level}*`,
+          `XP: *${targetUser.xp}*`,
+          `Coins: *${targetUser.coins}*`,
+          `Rank: *${targetUser.rank}*`,
+          `Wins: *${targetUser.wins}*`,
+          `Losses: *${targetUser.losses}*`,
+          `Streak: *${targetUser.streak}*`
+        ].join("\n")
+      ),
+      [target],
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // BOT SETTINGS
+  // ----------------------------------------------------------
+
+  if (
+    lower === "botsettings"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "THE REAPER SETTINGS",
+        [
+          `Mode: *${getModeDisplay()}*`,
+          `Prefix: *${getPrefix()}*`,
+          `Menu image: ${groupSettingDisplay(settings.menuImage)}`,
+          `Menu audio: ${groupSettingDisplay(settings.menuAudio)}`,
+          `Welcome: ${groupSettingDisplay(settings.welcome)}`,
+          `Goodbye: ${groupSettingDisplay(settings.goodbye)}`,
+          `Cooldown: *${settings.commandCooldown}ms*`
+        ].join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // BLOCK / UNBLOCK / BAN / UNBAN
+  // ----------------------------------------------------------
+
+  if (
+    lower === "block" ||
+    lower === "unblock" ||
+    lower === "ban" ||
+    lower === "unban"
+  ) {
+    const target =
+      getMentionedJids(msg)[0] ||
+      getReplyJid(msg);
+
+    if (!target) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${getPrefix()}${lower} @user`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      if (
+        lower === "block" ||
+        lower === "unblock"
+      ) {
+        await sock.updateBlockStatus(
+          target,
+          lower === "block"
+            ? "block"
+            : "unblock"
+        );
+      }
+
+      if (!settings.blockedUsers) {
+        settings.blockedUsers = {};
+      }
+
+      if (
+        lower === "ban"
+      ) {
+        settings.blockedUsers[
+          normalizeNumber(target)
+        ] = true;
+      }
+
+      if (
+        lower === "unban"
+      ) {
+        delete settings.blockedUsers[
+          normalizeNumber(target)
+        ];
+      }
+
+      saveSettings();
+
+      await sendMentions(
+        sock,
+        jid,
+        reaperSuccess(
+          "ACCOUNT CONTROL",
+          `${lower.toUpperCase()} → @${target.split("@")[0]}`
+        ),
+        [target],
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "ACCOUNT CONTROL FAILED",
+          err?.message || "WhatsApp rejected the operation."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // BROADCAST
+  // ----------------------------------------------------------
+
+  if (
+    lower === "broadcast"
+  ) {
+    const message =
+      args.join(" ").trim();
+
+    if (!message) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${getPrefix()}broadcast <message>`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const targets =
+      Object.keys(users);
+
+    let sent = 0;
+
+    for (
+      const number of targets
+    ) {
+      try {
+        const target =
+          number.includes("@")
+            ? number
+            : `${number}@s.whatsapp.net`;
+
+        await sock.sendMessage(
+          target,
+          {
+            text:
+              reaperBox(
+                "☠️ THE REAPER BROADCAST",
+                message
+              )
+          }
+        );
+
+        sent++;
+      } catch {}
+    }
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "BROADCAST COMPLETE",
+        `Delivered to *${sent}* registered users.`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // SUDO
+  // ----------------------------------------------------------
+
+  if (
+    lower === "sudo"
+  ) {
+    const target =
+      getMentionedJids(msg)[0] ||
+      getReplyJid(msg);
+
+    if (!target) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${getPrefix()}sudo @user`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    if (!settings.sudo) {
+      settings.sudo = [];
+    }
+
+    const number =
+      normalizeNumber(target);
+
+    if (
+      settings.sudo.includes(number)
+    ) {
+      settings.sudo =
+        settings.sudo.filter(
+          x => x !== number
+        );
+
+      saveSettings();
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "SUDO REMOVED",
+          `@${target.split("@")[0]} is no longer sudo.`
+        ),
+        msg
+      );
+    } else {
+      settings.sudo.push(number);
+      saveSettings();
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "SUDO ADDED",
+          `@${target.split("@")[0]} can now access owner-level bot controls.`
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // SESSION CLEANUP
+  // ----------------------------------------------------------
+
+  if (
+    lower === "cleansession"
+  ) {
+    try {
+      const authDir =
+        path.resolve("./auth");
+
+      if (
+        fs.existsSync(authDir)
+      ) {
+        for (
+          const file of fs.readdirSync(
+            authDir
+          )
+        ) {
+          if (
+            file === "creds.json"
+          ) continue;
+
+          try {
+            fs.rmSync(
+              path.join(
+                authDir,
+                file
+              ),
+              {
+                recursive: true,
+                force: true
+              }
+            );
+          } catch {}
+        }
+      }
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "SESSION CLEANUP",
+          "Temporary authentication files were cleaned."
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "CLEANUP FAILED",
+          err?.message || "Unable to clean session."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // RELOAD
+  // ----------------------------------------------------------
+
+  if (
+    lower === "reload"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "RELOAD",
+        "Configuration has been reloaded from disk."
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // RESTART / SHUTDOWN
+  // ----------------------------------------------------------
+
+  if (
+    lower === "restart"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ RESTARTING",
+        "THE REAPER is restarting..."
+      ),
+      msg
+    );
+
+    setTimeout(
+      () => process.exit(0),
+      1000
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "shutdown"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ SHUTDOWN",
+        "THE REAPER is going offline..."
+      ),
+      msg
+    );
+
+    setTimeout(
+      () => process.exit(0),
+      1000
+    );
+
+    return true;
+  }
+
+  return true;
+}
+
+
+// ============================================================
+// COMMAND DISPATCHER
+// ============================================================
+
+async function runCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  user,
+  sender,
+  isGroup
+) {
+  const jid =
+    msg.key.remoteJid;
+
+  // ----------------------------------------------------------
+  // PRIVATE MODE
+  // ----------------------------------------------------------
+
+  if (
+    !canUseBot(sender)
+  ) {
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // BLOCKED USERS
+  // ----------------------------------------------------------
+
+  const blocked =
+    settings.blockedUsers || {};
+
+  if (
+    blocked[
+      normalizeNumber(sender)
+    ]
+  ) {
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // OWNER COMMANDS
+  // ----------------------------------------------------------
+
+  if (
+    lower === "mode" ||
+    [
+      "owner",
+      "broadcast",
+      "restart",
+      "shutdown",
+      "setprefix",
+      "setmenu",
+      "setmenuimage",
+      "setmenuaudio",
+      "addxp",
+      "addcoins",
+      "setrank",
+      "block",
+      "unblock",
+      "ban",
+      "unban",
+      "sudo",
+      "reload",
+      "cleansession",
+      "userstats",
+      "botsettings"
+    ].includes(lower)
+  ) {
+    const handled =
+      await runOwnerCommand(
+        sock,
+        msg,
+        lower,
+        args,
+        sender,
+        jid,
+        user
+      );
+
+    if (handled) return;
+  }
+
+  // ----------------------------------------------------------
+  // GROUP COMMANDS
+  // ----------------------------------------------------------
+
+  const groupCommands =
+    new Set([
+      "groupinfo",
+      "admins",
+      "members",
+      "membercount",
+      "groupid",
+      "groupjid",
+      "groupname",
+      "groupdesc",
+      "setgroupname",
+      "setgroupdesc",
+      "setgrouppic",
+      "getgrouppic",
+      "add",
+      "remove",
+      "kick",
+      "promote",
+      "demote",
+      "warn",
+      "warnings",
+      "clearwarn",
+      "mute",
+      "unmute",
+      "tagall",
+      "hidetag",
+      "tagadmins",
+      "tagmembers",
+      "welcome",
+      "goodbye",
+      "setwelcome",
+      "setgoodbye",
+      "open",
+      "close",
+      "lock",
+      "unlock",
+      "invite",
+      "revoke",
+      "gcstatus",
+      "hijack"
+    ]);
+
+  if (
+    groupCommands.has(lower)
+  ) {
+    const handled =
+      await runGroupCommand(
+        sock,
+        msg,
+        lower,
+        args,
+        sender,
+        jid
+      );
+
+    if (handled) return;
+  }
+
+  // ----------------------------------------------------------
+  // PROTECTION
+  // ----------------------------------------------------------
+
+  const protection =
+    await runProtectionCommand(
+      sock,
+      msg,
+      lower,
+      args,
+      sender,
+      jid
+    );
+
+  if (protection) return;
+
+  // ----------------------------------------------------------
+  // DOWNLOADER
+  // ----------------------------------------------------------
+
+  if (
+    DOWNLOAD_ALIASES.has(lower)
+  ) {
+    await runDownloader(
+      sock,
+      msg,
+      lower,
+      args,
+      jid
+    );
+
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // MEDIA
+  // ----------------------------------------------------------
+
+  const media =
+    await runMediaCommand(
+      sock,
+      msg,
+      lower,
+      args,
+      jid
+    );
+
+  if (media) return;
+
+  // ----------------------------------------------------------
+  // STORY
+  // ----------------------------------------------------------
+
+  const story =
+    await runStoryCommand(
+      sock,
+      msg,
+      lower,
+      args,
+      user,
+      jid
+    );
+
+  if (story) return;
+
+  // ----------------------------------------------------------
+  // AI COMMANDS
+  // ----------------------------------------------------------
+
+  if (
+    [
+      "ai",
+      "chat",
+      "ask",
+      "explain",
+      "rewrite",
+      "summarize",
+      "translate"
+    ].includes(lower)
+  ) {
+    await runAICommand(
+      sock,
+      msg,
+      lower,
+      args,
+      jid
+    );
+
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // GENERAL COMMANDS
+  // ----------------------------------------------------------
+
+  if (
+    typeof runGeneralCommand ===
+    "function"
+  ) {
+    const result =
+      await runGeneralCommand(
+        sock,
+        msg,
+        lower,
+        args,
+        user,
+        sender,
+        jid
+      );
+
+    if (result) return;
+  }
+
+  // ----------------------------------------------------------
+  // ECONOMY
+  // ----------------------------------------------------------
+
+  if (
+    typeof runEconomyCommand ===
+    "function"
+  ) {
+    const result =
+      await runEconomyCommand(
+        sock,
+        msg,
+        lower,
+        args,
+        user,
+        sender,
+        jid
+      );
+
+    if (result) return;
+  }
+
+  // ----------------------------------------------------------
+  // FUN
+  // ----------------------------------------------------------
+
+  if (
+    typeof runFunCommand ===
+    "function"
+  ) {
+    const result =
+      await runFunCommand(
+        sock,
+        msg,
+        lower,
+        args,
+        user,
+        sender,
+        jid
+      );
+
+    if (result) return;
+  }
+
+  // ----------------------------------------------------------
+  // GAMES
+  // ----------------------------------------------------------
+
+  if (
+    typeof runGameCommand ===
+    "function"
+  ) {
+    const result =
+      await runGameCommand(
+        sock,
+        msg,
+        lower,
+        args,
+        user,
+        sender,
+        jid
+      );
+
+    if (result) return;
+  }
+
+  // ----------------------------------------------------------
+  // BATTLE
+  // ----------------------------------------------------------
+
+  if (
+    typeof runBattleCommand ===
+    "function"
+  ) {
+    const result =
+      await runBattleCommand(
+        sock,
+        msg,
+        lower,
+        args,
+        user,
+        sender,
+        jid
+      );
+
+    if (result) return;
+  }
+
+  // ----------------------------------------------------------
+  // ACTIVE GAME
+  // ----------------------------------------------------------
+
+  if (
+    typeof handleActiveGame ===
+    "function"
+  ) {
+    const result =
+      await handleActiveGame(
+        sock,
+        msg,
+        lower,
+        args,
+        user,
+        sender,
+        jid
+      );
+
+    if (result) return;
+  }
+
+  // ----------------------------------------------------------
+  // UNKNOWN
+  // ----------------------------------------------------------
+
+  await reply(
+    sock,
+    jid,
+    reaperError(
+      "UNKNOWN COMMAND",
+      `Command *${lower}* could not be processed.\nUse *${getPrefix()}menu* to view commands.`
+    ),
+    msg
+  );
+}
+
+
+// ============================================================
+// WELCOME / GOODBYE EVENTS
+// ============================================================
+
+async function handleGroupParticipantsUpdate(
+  sock,
+  update
+) {
+  const jid =
+    update.id;
+
+  if (
+    !jid ||
+    !jid.endsWith("@g.us")
+  ) {
+    return;
+  }
+
+  const group =
+    ensureGroupSettings(jid);
+
+  if (
+    !group.welcome &&
+    !group.goodbye
+  ) {
+    return;
+  }
+
+  let metadata;
+
+  try {
+    metadata =
+      await sock.groupMetadata(jid);
+  } catch {
+    return;
+  }
+
+  for (
+    const participant of
+    update.participants || []
+  ) {
+    const number =
+      participant.split("@")[0];
+
+    if (
+      update.action === "add" &&
+      group.welcome
+    ) {
+      const text =
+        String(
+          group.welcomeText ||
+          "🦇 Welcome @user to THE REAPER realm."
+        )
+        .replace(
+          /@user/g,
+          `@${number}`
+        );
+
+      await sock.sendMessage(
+        jid,
+        {
+          text,
+          mentions: [
+            participant
+          ]
+        }
+      );
+    }
+
+    if (
+      (
+        update.action === "remove" ||
+        update.action === "leave"
+      ) &&
+      group.goodbye
+    ) {
+      const text =
+        String(
+          group.goodbyeText ||
+          "☠️ @user has left the realm."
+        )
+        .replace(
+          /@user/g,
+          `@${number}`
+        );
+
+      await sock.sendMessage(
+        jid,
+        {
+          text,
+          mentions: [
+            participant
+          ]
+        }
+      );
+    }
+  }
+}
+
+
+// ============================================================
+// CALL PROTECTION
+// ============================================================
+
+async function handleIncomingCall(
+  sock,
+  call
+) {
+  for (
+    const item of
+    call || []
+  ) {
+    try {
+      const caller =
+        item.from;
+
+      if (!caller) continue;
+
+      const text =
+        "🛡️ *REAPER SECURITY*\n\nCalls are not accepted by THE REAPER.";
+
+      await sock.sendMessage(
+        caller,
+        {
+          text
+        }
+      );
+
+      if (
+        typeof sock.rejectCall ===
+        "function"
+      ) {
+        await sock.rejectCall(
+          item.id,
+          caller
+        );
+      }
+    } catch {}
+  }
+}
+
+
+// ============================================================
+// AUTOMATIC AI MESSAGE HANDLER
+// ============================================================
+
+async function handleAutomaticAI(
+  sock,
+  msg,
+  text,
+  jid
+) {
+  if (!shouldTriggerAI(
+    msg,
+    sock,
+    jid,
+    text
+  )) {
+    return false;
+  }
+
+  // Explicit AI command is already handled
+  // by the normal command router.
+  const prefix =
+    getPrefix();
+
+  if (
+    prefix &&
+    text.trim().startsWith(prefix)
+  ) {
+    return false;
+  }
+
+  let prompt =
+    cleanAIInput(text);
+
+  if (!prompt) {
+    prompt =
+      "The user mentioned THE REAPER. Respond naturally and ask what they need.";
+  }
+
+  try {
+    const answer =
+      await callOpenRouter(
+        prompt
+      );
+
+    if (!answer) {
+      return false;
+    }
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ REAPER AI",
+        answer
+      ),
+      msg
+    );
+
+    return true;
+  } catch (err) {
+    console.error(
+      "Automatic AI error:",
+      err?.message || err
+    );
+
+    return false;
+  }
+}
+
+
+// ============================================================
+// FINAL BOT STARTUP
+// ============================================================
+
+async function startBot() {
+  const {
+    state,
+    saveCreds
+  } =
+    await useMultiFileAuthState(
+      "auth"
+    );
+
+  let version;
+
+  try {
+    const result =
+      await fetchLatestWaWebVersion();
+
+    if (
+      result?.version
+    ) {
+      version =
+        result.version;
+    }
+  } catch {}
+
+  const sock =
+    makeWASocket({
+      auth: state,
+      logger:
+        P({
+          level: "silent"
+        }),
+      printQRInTerminal: false,
+      ...(version
+        ? { version }
+        : {})
+    });
+
+  sock.ev.on(
+    "creds.update",
+    saveCreds
+  );
+
+  let pairingRequested =
+    false;
+
+  // ----------------------------------------------------------
+  // CONNECTION
+  // ----------------------------------------------------------
+
+  sock.ev.on(
+    "connection.update",
+    async ({
+      connection,
+      lastDisconnect
+    }) => {
+      if (
+        connection === "connecting" &&
+        !state.creds.registered &&
+        !pairingRequested
+      ) {
+        const phone =
+          getOwnerNumber();
+
+        if (!phone) {
+          console.log(
+            "PHONE_NUMBER is missing in Railway Variables."
+          );
+          return;
+        }
+
+        pairingRequested =
+          true;
+
+        try {
+          await new Promise(
+            resolve =>
+              setTimeout(
+                resolve,
+                2500
+              )
+          );
+
+          const code =
+            await sock.requestPairingCode(
+              phone
+            );
+
+          console.log(
+            "\n=============================="
+          );
+          console.log(
+            "THE REAPER PAIRING CODE"
+          );
+          console.log(
+            code
+          );
+          console.log(
+            "==============================\n"
+          );
+        } catch (err) {
+          pairingRequested =
+            false;
+
+          console.error(
+            "Pairing code error:",
+            err?.message || err
+          );
+        }
+      }
+
+      if (
+        connection === "open"
+      ) {
+        console.log(
+          "🦇 THE REAPER HAS AWAKENED — CONNECTED"
+        );
+
+        console.log(
+          `Mode: ${getModeDisplay()}`
+        );
+
+        console.log(
+          `Prefix: ${getPrefix()}`
+        );
+
+        console.log(
+          `Commands: ${ALL_COMMANDS.size}`
+        );
+      }
+
+      if (
+        connection === "close"
+      ) {
+        const statusCode =
+          lastDisconnect
+            ?.error
+            ?.output
+            ?.statusCode;
+
+        console.log(
+          "WhatsApp connection closed:",
+          statusCode || "unknown"
+        );
+
+        if (
+          statusCode !==
+          DisconnectReason.loggedOut
+        ) {
+          setTimeout(
+            () => {
+              startBot().catch(
+                err =>
+                  console.error(
+                    "Reconnect failed:",
+                    err
+                  )
+              );
+            },
+            3000
+          );
+        } else {
+          console.log(
+            "Logged out. Remove the auth session only if you intentionally want to pair again."
+          );
+        }
+      }
+    }
+  );
+
+  // ----------------------------------------------------------
+  // GROUP PARTICIPANTS
+  // ----------------------------------------------------------
+
+  sock.ev.on(
+    "group-participants.update",
+    async update => {
+      try {
+        await handleGroupParticipantsUpdate(
+          sock,
+          update
+        );
+      } catch (err) {
+        console.error(
+          "Group participant error:",
+          err?.message || err
+        );
+      }
+    }
+  );
+
+  // ----------------------------------------------------------
+  // CALLS
+  // ----------------------------------------------------------
+
+  sock.ev.on(
+    "call",
+    async call => {
+      try {
+        await handleIncomingCall(
+          sock,
+          call
+        );
+      } catch (err) {
+        console.error(
+          "Call handler error:",
+          err?.message || err
+        );
+      }
+    }
+  );
+
+  // ----------------------------------------------------------
+  // MESSAGES
+  // ----------------------------------------------------------
+
+  sock.ev.on(
+    "messages.upsert",
+    async ({
+      messages,
+      type
+    }) => {
+      try {
+        if (
+          type !== "notify" &&
+          type !== "append"
+        ) {
+          return;
+        }
+
+        const msg =
+          messages?.[0];
+
+        if (
+          !msg?.message
+        ) {
+          return;
+        }
+
+        const jid =
+          msg.key.remoteJid;
+
+        if (
+          !jid ||
+          jid ===
+            "status@broadcast"
+        ) {
+          return;
+        }
+
+        const sender =
+          jidFromMessage(msg);
+
+        const text =
+          getText(msg);
+
+        if (!text) {
+          return;
+        }
+
+        const user =
+          getUser(
+            sender,
+            msg.pushName ||
+              "Soul"
+          );
+
+        const trimmed =
+          text.trim();
+
+        // ------------------------------------------------------
+        // GROUP PROTECTION
+        // ------------------------------------------------------
+
+        if (
+          jid.endsWith("@g.us")
+        ) {
+          try {
+            const metadata =
+              await getGroupInfo(
+                sock,
+                jid
+              );
+
+            if (
+              metadata
+            ) {
+              const blocked =
+                await handleProtection(
+                  sock,
+                  msg,
+                  jid,
+                  sender,
+                  text,
+                  metadata
+                );
+
+              if (
+                blocked
+              ) {
+                return;
+              }
+            }
+          } catch {}
+        }
+
+        // ------------------------------------------------------
+        // AUTOMATIC AI
+        // ------------------------------------------------------
+
+        const aiHandled =
+          await handleAutomaticAI(
+            sock,
+            msg,
+            text,
+            jid
+          );
+
+        if (
+          aiHandled
+        ) {
+          return;
+        }
+
+        // ------------------------------------------------------
+        // COMMAND PARSING
+        // ------------------------------------------------------
+
+        const prefix =
+          getPrefix();
+
+        let body =
+          trimmed;
+
+        if (
+          prefix &&
+          body.startsWith(
+            prefix
+          )
+        ) {
+          body =
+            body
+              .slice(prefix.length)
+              .trim();
+        } else {
+          // Commands without a prefix
+          // are accepted for menu/help.
+          if (
+            !prefix ||
+            !trimmed
+          ) {
+            return;
+          }
+
+          return;
+        }
+
+        if (!body) {
+          return;
+        }
+
+        const parts =
+          body.split(/\s+/);
+
+        const cmd =
+          parts
+            .shift()
+            .toLowerCase();
+
+        const args =
+          parts;
+
+        // ------------------------------------------------------
+        // COMMAND CHECK
+        // ------------------------------------------------------
+
+        if (
+          !ALL_COMMANDS.has(cmd) &&
+          cmd !== "mode"
+        ) {
+          await react(
+            sock,
+            jid,
+            msg.key,
+            "❌"
+          );
+
+          await reply(
+            sock,
+            jid,
+            reaperError(
+              "UNKNOWN COMMAND",
+              `*${cmd}* is not a THE REAPER command.\n\nUse *${prefix}menu* to view the command system.`
+            ),
+            msg
+          );
+
+          return;
+        }
+
+        // ------------------------------------------------------
+        // COOLDOWN
+        // ------------------------------------------------------
+
+        const remaining =
+          checkCommandCooldown(
+            jid,
+            cmd
+          );
+
+        if (
+          remaining > 0
+        ) {
+          await reply(
+            sock,
+            jid,
+            `🦇 Slow down, Soul. Try again in *${remaining}s*.`,
+            msg
+          );
+
+          return;
+        }
+
+        // ------------------------------------------------------
+        // REACTION
+        // ------------------------------------------------------
+
+        await react(
+          sock,
+          jid,
+          msg.key,
+          "🦇"
+        );
+
+        // ------------------------------------------------------
+        // EXECUTE
+        // ------------------------------------------------------
+
+        await runCommand(
+          sock,
+          msg,
+          cmd,
+          args,
+          user,
+          sender,
+          jid.endsWith("@g.us")
+        );
+
+        saveUsers();
+      } catch (err) {
+        console.error(
+          "Message handler error:",
+          err
+        );
+
+        try {
+          const target =
+            messages?.[0]
+              ?.key
+              ?.remoteJid;
+
+          if (target) {
+            await reply(
+              sock,
+              target,
+              reaperError(
+                "SYSTEM ERROR",
+                "THE REAPER encountered an internal error while processing that command."
+              ),
+              messages[0]
+            );
+          }
+        } catch {}
+      }
+    }
+  );
+
+  return sock;
+}
+
+
+// ============================================================
+// PROCESS SAFETY
+// ============================================================
+
+process.on(
+  "uncaughtException",
+  err => {
+    console.error(
+      "Uncaught exception:",
+      err
+    );
+  }
+);
+
+process.on(
+  "unhandledRejection",
+  err => {
+    console.error(
+      "Unhandled rejection:",
+      err
+    );
+  }
+);
+
+
+// ============================================================
+// START THE REAPER
+// ============================================================
+
+startBot().catch(
+  err => {
+    console.error(
+      "Failed to start THE REAPER:",
+      err
+    );
+
+    process.exit(1);
+  }
+);
