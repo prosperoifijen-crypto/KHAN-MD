@@ -2472,3 +2472,3262 @@ async function runFunCommand(
         COMPLIMENTS
       )}`,
       ms
+// ============================================================
+// THE REAPER — BLOCK 3/4
+// GROUP MANAGEMENT • PROTECTION • AI • MEDIA • DOWNLOADER
+// STORY / QUEST SYSTEM
+// ============================================================
+
+// ------------------------------------------------------------
+// GROUP DATABASE
+// ------------------------------------------------------------
+
+function ensureGroupSettings(jid) {
+  if (!settings.groups) settings.groups = {};
+
+  if (!settings.groups[jid]) {
+    settings.groups[jid] = {
+      welcome: settings.welcome,
+      goodbye: settings.goodbye,
+      welcomeText:
+        "🦇 Welcome @user to *THE REAPER* realm.",
+      goodbyeText:
+        "☠️ @user has left the realm.",
+      warnLimit: 3,
+      warnings: {},
+      muted: false,
+
+      antilink: false,
+      antibadword: false,
+      antispam: false,
+      antiflood: false,
+      antibot: false,
+      anticall: false,
+      antidelete: false,
+      antiedit: false,
+      antiviewonce: false,
+      antisticker: false,
+      antitag: false,
+      antimention: false,
+      antigroup: false,
+      antipromote: false,
+      protection: false,
+
+      badwords: [],
+      flood: {},
+      spam: {},
+
+      originalName: null,
+      originalDescription: null
+    };
+
+    saveSettings();
+  }
+
+  return settings.groups[jid];
+}
+
+function getGroupSettings(jid) {
+  return ensureGroupSettings(jid);
+}
+
+function groupSetting(jid, key, value) {
+  const group = ensureGroupSettings(jid);
+
+  if (typeof value === "undefined") {
+    return group[key];
+  }
+
+  group[key] = value;
+  saveSettings();
+  return value;
+}
+
+function groupSettingDisplay(value) {
+  return value ? "🟢 ON" : "🔴 OFF";
+}
+
+function getGroupMember(metadata, jid) {
+  return metadata?.participants?.find(
+    p => p.id === jid
+  );
+}
+
+function getBotJid(sock) {
+  return sock?.user?.id || "";
+}
+
+function isBotGroupAdmin(metadata, sock) {
+  return participantIsAdmin(
+    metadata,
+    getBotJid(sock)
+  );
+}
+
+async function requireBotAdmin(sock, jid, msg) {
+  const metadata = await getGroupInfo(sock, jid);
+
+  if (!metadata) {
+    await reply(
+      sock,
+      jid,
+      reaperError("GROUP ONLY", "Group information could not be loaded."),
+      msg
+    );
+    return null;
+  }
+
+  if (!isBotGroupAdmin(metadata, sock)) {
+    await reply(
+      sock,
+      jid,
+      reaperError(
+        "BOT ADMIN",
+        "THE REAPER must be a group administrator for this action."
+      ),
+      msg
+    );
+    return null;
+  }
+
+  return metadata;
+}
+
+function parseMentionTargets(metadata, args, sender) {
+  const result = [];
+
+  for (const arg of args) {
+    const clean = String(arg)
+      .replace("@", "")
+      .replace(/\D/g, "");
+
+    if (clean.length >= 7) {
+      const jid = `${clean}@s.whatsapp.net`;
+
+      if (
+        metadata?.participants?.some(
+          p => p.id === jid
+        )
+      ) {
+        result.push(jid);
+      }
+    }
+  }
+
+  if (!result.length && sender) {
+    result.push(sender);
+  }
+
+  return [...new Set(result)];
+}
+
+function mentionText(jids) {
+  return jids
+    .map(jid => `@${jid.split("@")[0]}`)
+    .join(" ");
+}
+
+async function sendMentions(sock, jid, text, mentions = [], quoted = null) {
+  return sock.sendMessage(
+    jid,
+    {
+      text,
+      mentions
+    },
+    quoted ? { quoted } : {}
+  );
+}
+
+// ------------------------------------------------------------
+// GROUP COMMANDS
+// ------------------------------------------------------------
+
+async function runGroupCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  sender,
+  jid
+) {
+  if (!jid.endsWith("@g.us")) {
+    await reply(
+      sock,
+      jid,
+      reaperError("GROUP ONLY", "This command can only be used inside a group."),
+      msg
+    );
+    return true;
+  }
+
+  const metadata = await getGroupInfo(sock, jid);
+
+  if (!metadata) {
+    await reply(
+      sock,
+      jid,
+      reaperError("GROUP ERROR", "Unable to read group information."),
+      msg
+    );
+    return true;
+  }
+
+  const group = ensureGroupSettings(jid);
+  const prefix = getPrefix();
+
+  // ----------------------------------------------------------
+  // INFORMATION
+  // ----------------------------------------------------------
+
+  if (lower === "groupinfo") {
+    const admins = metadata.participants.filter(
+      p => p.admin
+    ).length;
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "GROUP INFORMATION",
+        [
+          `▸ Name: ${metadata.subject || "Unknown"}`,
+          `▸ ID: ${jid}`,
+          `▸ Members: ${metadata.participants.length}`,
+          `▸ Admins: ${admins}`,
+          `▸ Owner: ${metadata.owner || "Unknown"}`,
+          `▸ Created: ${
+            metadata.creation
+              ? new Date(metadata.creation * 1000).toLocaleString()
+              : "Unknown"
+          }`
+        ].join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "members" ||
+    lower === "membercount"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperInfo(
+        "GROUP MEMBERS",
+        `Total members: *${metadata.participants.length}*`
+      ),
+      msg
+    );
+    return true;
+  }
+
+  if (
+    lower === "groupid" ||
+    lower === "groupjid"
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "GROUP ID",
+        jid
+      ),
+      msg
+    );
+    return true;
+  }
+
+  if (lower === "groupname") {
+    await reply(
+      sock,
+      jid,
+      reaperInfo(
+        "GROUP NAME",
+        metadata.subject || "Unknown"
+      ),
+      msg
+    );
+    return true;
+  }
+
+  if (lower === "groupdesc") {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "GROUP DESCRIPTION",
+        metadata.desc || "No description."
+      ),
+      msg
+    );
+    return true;
+  }
+
+  if (lower === "admins") {
+    const admins = metadata.participants.filter(
+      p => p.admin
+    );
+
+    if (!admins.length) {
+      await reply(
+        sock,
+        jid,
+        reaperInfo("ADMINS", "No administrators detected."),
+        msg
+      );
+      return true;
+    }
+
+    const mentions = admins.map(p => p.id);
+
+    await sendMentions(
+      sock,
+      jid,
+      reaperBox(
+        "GROUP ADMINS",
+        admins
+          .map(
+            p =>
+              `☠️ @${p.id.split("@")[0]} ${
+                p.admin === "superadmin"
+                  ? "👑"
+                  : "🛡️"
+              }`
+          )
+          .join("\n")
+      ),
+      mentions,
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // GROUP NAME / DESCRIPTION
+  // ----------------------------------------------------------
+
+  if (
+    lower === "setgroupname" ||
+    lower === "setgroupdesc"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "ADMIN ONLY",
+          "Only group administrators can use this command."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    if (!isBotGroupAdmin(metadata, sock)) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "BOT ADMIN",
+          "Make THE REAPER an administrator first."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const value = args.join(" ").trim();
+
+    if (!value) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}${lower} <text>`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      if (lower === "setgroupname") {
+        await sock.groupUpdateSubject(
+          jid,
+          value
+        );
+      } else {
+        await sock.groupUpdateDescription(
+          jid,
+          value
+        );
+      }
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "GROUP UPDATED",
+          lower === "setgroupname"
+            ? `New name: *${value}*`
+            : `New description: *${value}*`
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "UPDATE FAILED",
+          err?.message || "WhatsApp rejected the change."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // ADD / REMOVE / KICK
+  // ----------------------------------------------------------
+
+  if (
+    lower === "add" ||
+    lower === "remove" ||
+    lower === "kick"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only group admins can do this."),
+        msg
+      );
+      return true;
+    }
+
+    const botMeta = await requireBotAdmin(
+      sock,
+      jid,
+      msg
+    );
+
+    if (!botMeta) return true;
+
+    const targets = getMentionedJids(msg);
+
+    if (!targets.length && args.length) {
+      for (const arg of args) {
+        const digits = String(arg).replace(/\D/g, "");
+
+        if (digits.length >= 7) {
+          targets.push(
+            `${digits}@s.whatsapp.net`
+          );
+        }
+      }
+    }
+
+    if (!targets.length) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}${lower} @user`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      const action =
+        lower === "add"
+          ? "add"
+          : "remove";
+
+      const result =
+        await sock.groupParticipantsUpdate(
+          jid,
+          [...new Set(targets)],
+          action
+        );
+
+      await sendMentions(
+        sock,
+        jid,
+        reaperSuccess(
+          "GROUP ACTION",
+          `${action.toUpperCase()} requested for:\n${mentionText(targets)}`
+        ),
+        targets,
+        msg
+      );
+
+      return true;
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "GROUP ACTION FAILED",
+          err?.message || "WhatsApp rejected the operation."
+        ),
+        msg
+      );
+      return true;
+    }
+  }
+
+  // ----------------------------------------------------------
+  // PROMOTE / DEMOTE
+  // ----------------------------------------------------------
+
+  if (
+    lower === "promote" ||
+    lower === "demote"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only group admins can do this."),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    let targets = getMentionedJids(msg);
+
+    if (!targets.length) {
+      targets = parseMentionTargets(
+        metadata,
+        args,
+        sender
+      );
+    }
+
+    try {
+      await sock.groupParticipantsUpdate(
+        jid,
+        targets,
+        lower === "promote"
+          ? "promote"
+          : "demote"
+      );
+
+      await sendMentions(
+        sock,
+        jid,
+        reaperSuccess(
+          lower === "promote"
+            ? "PROMOTION"
+            : "DEMOTION",
+          mentionText(targets)
+        ),
+        targets,
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "FAILED",
+          err?.message || "WhatsApp rejected the operation."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // WARNINGS
+  // ----------------------------------------------------------
+
+  if (
+    lower === "warn" ||
+    lower === "warnings" ||
+    lower === "clearwarn"
+  ) {
+    if (
+      lower === "warn" &&
+      !participantIsAdmin(metadata, sender)
+    ) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "ADMIN ONLY",
+          "Only administrators can issue warnings."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    let targets = getMentionedJids(msg);
+
+    if (!targets.length) {
+      targets = parseMentionTargets(
+        metadata,
+        args,
+        sender
+      );
+    }
+
+    const target = targets[0];
+
+    if (!target) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}${lower} @user`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const key = target;
+    group.warnings[key] =
+      Number(group.warnings[key] || 0);
+
+    if (lower === "warnings") {
+      await sendMentions(
+        sock,
+        jid,
+        reaperBox(
+          "WARNING STATUS",
+          `@${target.split("@")[0]}\nWarnings: *${group.warnings[key]} / ${group.warnLimit}*`
+        ),
+        [target],
+        msg
+      );
+      return true;
+    }
+
+    if (lower === "clearwarn") {
+      group.warnings[key] = 0;
+      saveSettings();
+
+      await sendMentions(
+        sock,
+        jid,
+        reaperSuccess(
+          "WARNINGS CLEARED",
+          `@${target.split("@")[0]} now has 0 warnings.`
+        ),
+        [target],
+        msg
+      );
+
+      return true;
+    }
+
+    group.warnings[key]++;
+    saveSettings();
+
+    const count = group.warnings[key];
+
+    await sendMentions(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ REAPER WARNING",
+        [
+          `Target: @${target.split("@")[0]}`,
+          `Warning: *${count}/${group.warnLimit}*`,
+          count >= group.warnLimit
+            ? "⚠️ Warning limit reached."
+            : "Further violations may trigger action."
+        ].join("\n")
+      ),
+      [target],
+      msg
+    );
+
+    if (
+      count >= group.warnLimit &&
+      participantIsAdmin(metadata, target) === false &&
+      isBotGroupAdmin(metadata, sock)
+    ) {
+      try {
+        await sock.groupParticipantsUpdate(
+          jid,
+          [target],
+          "remove"
+        );
+
+        group.warnings[key] = 0;
+        saveSettings();
+
+        await sendMentions(
+          sock,
+          jid,
+          `☠️ @${target.split("@")[0]} has reached the warning limit and was removed.`,
+          [target],
+          msg
+        );
+      } catch {}
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // TAGGING
+  // ----------------------------------------------------------
+
+  if (
+    lower === "tagall" ||
+    lower === "hidetag" ||
+    lower === "tagadmins" ||
+    lower === "tagmembers"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only group admins can use tagging controls."),
+        msg
+      );
+      return true;
+    }
+
+    let targets = [];
+
+    if (lower === "tagadmins") {
+      targets = metadata.participants
+        .filter(p => p.admin)
+        .map(p => p.id);
+    } else if (lower === "tagmembers") {
+      targets = metadata.participants
+        .filter(p => !p.admin)
+        .map(p => p.id);
+    } else {
+      targets = metadata.participants.map(
+        p => p.id
+      );
+    }
+
+    const text =
+      args.join(" ").trim() ||
+      "☠️ THE REAPER summons the realm.";
+
+    await sendMentions(
+      sock,
+      jid,
+      `${text}\n\n${mentionText(targets)}`,
+      targets,
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // OPEN / CLOSE
+  // LOCK / UNLOCK
+  // ----------------------------------------------------------
+
+  if (
+    lower === "open" ||
+    lower === "close" ||
+    lower === "lock" ||
+    lower === "unlock"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only group admins can change this."),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    try {
+      const adminsOnly =
+        lower === "close" ||
+        lower === "lock";
+
+      await sock.groupSettingUpdate(
+        jid,
+        adminsOnly
+          ? "announcement"
+          : "not_announcement"
+      );
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          lower === "close" || lower === "lock"
+            ? "GROUP LOCKED"
+            : "GROUP OPENED",
+          lower === "close" || lower === "lock"
+            ? "Only administrators can send messages."
+            : "All members can send messages."
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "SETTING FAILED",
+          err?.message || "WhatsApp rejected the group setting."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // MUTE / UNMUTE
+  // ----------------------------------------------------------
+
+  if (
+    lower === "mute" ||
+    lower === "unmute"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only administrators can mute the group."),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    try {
+      await sock.groupSettingUpdate(
+        jid,
+        lower === "mute"
+          ? "announcement"
+          : "not_announcement"
+      );
+
+      group.muted =
+        lower === "mute";
+
+      saveSettings();
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          lower === "mute"
+            ? "GROUP MUTED"
+            : "GROUP UNMUTED",
+          lower === "mute"
+            ? "Only admins can send messages."
+            : "Members can send messages again."
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "FAILED",
+          err?.message || "Unable to change group state."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // INVITE / REVOKE
+  // ----------------------------------------------------------
+
+  if (
+    lower === "invite" ||
+    lower === "revoke"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only administrators can manage invite links."),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    try {
+      if (lower === "revoke") {
+        const code =
+          await sock.groupRevokeInvite(jid);
+
+        await reply(
+          sock,
+          jid,
+          reaperSuccess(
+            "INVITE REVOKED",
+            "The previous group invite link is no longer valid."
+          ),
+          msg
+        );
+
+        return true;
+      }
+
+      const code =
+        await sock.groupInviteCode(jid);
+
+      await reply(
+        sock,
+        jid,
+        reaperBox(
+          "GROUP INVITE",
+          `https://chat.whatsapp.com/${code}`
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "INVITE ERROR",
+          err?.message || "Unable to access the invite."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // WELCOME / GOODBYE SETTINGS
+  // ----------------------------------------------------------
+
+  if (
+    lower === "welcome" ||
+    lower === "goodbye"
+  ) {
+    const key = lower;
+
+    if (
+      args[0] &&
+      ["on", "off"].includes(
+        args[0].toLowerCase()
+      )
+    ) {
+      if (!participantIsAdmin(metadata, sender)) {
+        await reply(
+          sock,
+          jid,
+          reaperError("ADMIN ONLY", "Only administrators can change this."),
+          msg
+        );
+        return true;
+      }
+
+      group[key] =
+        args[0].toLowerCase() === "on";
+
+      saveSettings();
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          `${key.toUpperCase()} UPDATED`,
+          `${key} is now ${groupSettingDisplay(group[key])}`
+        ),
+        msg
+      );
+
+      return true;
+    }
+
+    await reply(
+      sock,
+      jid,
+      reaperInfo(
+        key.toUpperCase(),
+        `${key}: ${groupSettingDisplay(group[key])}\n\nUse ${prefix}${key} on/off`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "setwelcome" ||
+    lower === "setgoodbye"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only group admins can change messages."),
+        msg
+      );
+      return true;
+    }
+
+    const key =
+      lower === "setwelcome"
+        ? "welcomeText"
+        : "goodbyeText";
+
+    const value =
+      args.join(" ").trim();
+
+    if (!value) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}${lower} <message>`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    group[key] = value;
+    saveSettings();
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "MESSAGE SAVED",
+        `${lower === "setwelcome" ? "Welcome" : "Goodbye"} message updated.`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // GROUP PROFILE PICTURE
+  // ----------------------------------------------------------
+
+  if (
+    lower === "setgrouppic" ||
+    lower === "getgrouppic"
+  ) {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError("ADMIN ONLY", "Only administrators can change group media."),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    if (lower === "getgrouppic") {
+      try {
+        const url =
+          await sock.profilePictureUrl(
+            jid,
+            "image"
+          );
+
+        await sock.sendMessage(
+          jid,
+          {
+            image: {
+              url
+            },
+            caption:
+              "☠️ *THE REAPER — GROUP PROFILE*"
+          },
+          { quoted: msg }
+        );
+      } catch {
+        await reply(
+          sock,
+          jid,
+          reaperError(
+            "PROFILE IMAGE",
+            "No group profile picture could be retrieved."
+          ),
+          msg
+        );
+      }
+
+      return true;
+    }
+
+    const image =
+      msg.message?.imageMessage ||
+      msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+
+    if (!image) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}setgrouppic` +
+          "\nReply to an image with this command."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      const quoted =
+        msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+      let sourceMessage = msg;
+
+      if (quoted) {
+        sourceMessage = {
+          message: quoted
+        };
+      }
+
+      const buffer =
+        await downloadMediaMessage(
+          sourceMessage,
+          "buffer",
+          {},
+          {
+            logger: P({ level: "silent" }),
+            reuploadRequest: sock.updateMediaMessage
+          }
+        );
+
+      await sock.updateProfilePicture(
+        jid,
+        buffer
+      );
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "GROUP PICTURE",
+          "Group profile picture updated."
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "PROFILE UPDATE FAILED",
+          err?.message || "Unable to update the picture."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // GROUP STATUS
+  // ----------------------------------------------------------
+
+  if (lower === "gcstatus") {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "GROUP STATUS",
+        [
+          `▸ Welcome: ${groupSettingDisplay(group.welcome)}`,
+          `▸ Goodbye: ${groupSettingDisplay(group.goodbye)}`,
+          `▸ Anti-Link: ${groupSettingDisplay(group.antilink)}`,
+          `▸ Anti-Spam: ${groupSettingDisplay(group.antispam)}`,
+          `▸ Anti-Flood: ${groupSettingDisplay(group.antiflood)}`,
+          `▸ Protection: ${groupSettingDisplay(group.protection)}`,
+          `▸ Warnings: ${Object.keys(group.warnings).length}`
+        ].join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // REAL HIJACK
+  // ----------------------------------------------------------
+
+  if (lower === "hijack") {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "ADMIN ONLY",
+          "You must be a group administrator to activate Reaper Hijack."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    if (!(await requireBotAdmin(sock, jid, msg))) {
+      return true;
+    }
+
+    try {
+      if (!group.originalName) {
+        group.originalName =
+          metadata.subject || null;
+      }
+
+      if (!group.originalDescription) {
+        group.originalDescription =
+          metadata.desc || null;
+      }
+
+      const reaperName =
+        `☠️ THE REAPER — ${metadata.subject || "REALM"}`;
+
+      const reaperDescription =
+        [
+          "☠️ THE REAPER HAS TAKEN CONTROL ☠️",
+          "",
+          "⚔️ This realm is under Reaper protection.",
+          "🩸 Respect the rules.",
+          "🦇 Obey the administrators.",
+          "",
+          "THE REAPER — KHAN-MD"
+        ].join("\n");
+
+      await sock.groupUpdateSubject(
+        jid,
+        reaperName.slice(0, 100)
+      );
+
+      await sock.groupUpdateDescription(
+        jid,
+        reaperDescription.slice(0, 2048)
+      );
+
+      await sock.groupSettingUpdate(
+        jid,
+        "announcement"
+      );
+
+      group.hijacked = true;
+      saveSettings();
+
+      const admins =
+        metadata.participants
+          .filter(p => p.admin)
+          .map(p => p.id);
+
+      await sendMentions(
+        sock,
+        jid,
+        [
+          "☠️ *THE REAPER HAS AWAKENED*",
+          "",
+          "⚔️ GROUP HIJACK PROTOCOL: *ACTIVE*",
+          "",
+          "The realm has been sealed.",
+          "Only administrators may speak.",
+          "",
+          mentionText(admins)
+        ].join("\n"),
+        admins,
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "HIJACK FAILED",
+          err?.message || "WhatsApp rejected one of the group operations."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+
+// ============================================================
+// PROTECTION SYSTEM
+// ============================================================
+
+const BADWORD_DEFAULTS = [
+  "spamword",
+  "scam",
+  "fraud"
+];
+
+const recentMessages = new Map();
+
+function protectionEnabled(jid, key) {
+  const group = ensureGroupSettings(jid);
+  return !!(
+    group.protection ||
+    group[key]
+  );
+}
+
+function rememberMessage(jid, sender, text) {
+  const key = `${jid}:${sender}`;
+
+  if (!recentMessages.has(key)) {
+    recentMessages.set(key, []);
+  }
+
+  const list = recentMessages.get(key);
+
+  list.push({
+    time: Date.now(),
+    text: String(text || "")
+  });
+
+  while (
+    list.length &&
+    Date.now() - list[0].time > 10000
+  ) {
+    list.shift();
+  }
+
+  if (list.length > 20) {
+    list.splice(
+      0,
+      list.length - 20
+    );
+  }
+
+  return list;
+}
+
+function containsLink(text) {
+  return /https?:\/\/|www\.|chat\.whatsapp\.com\//i.test(
+    String(text || "")
+  );
+}
+
+function containsBadword(text, group) {
+  const words =
+    Array.isArray(group.badwords) &&
+    group.badwords.length
+      ? group.badwords
+      : BADWORD_DEFAULTS;
+
+  const value =
+    String(text || "").toLowerCase();
+
+  return words.some(word =>
+    value.includes(
+      String(word).toLowerCase()
+    )
+  );
+}
+
+async function handleProtection(
+  sock,
+  msg,
+  jid,
+  sender,
+  text,
+  metadata
+) {
+  if (!jid.endsWith("@g.us")) {
+    return false;
+  }
+
+  const group =
+    ensureGroupSettings(jid);
+
+  const senderAdmin =
+    participantIsAdmin(
+      metadata,
+      sender
+    );
+
+  if (senderAdmin) {
+    return false;
+  }
+
+  // ----------------------------------------------------------
+  // ANTI LINK
+  // ----------------------------------------------------------
+
+  if (
+    protectionEnabled(jid, "antilink") &&
+    containsLink(text)
+  ) {
+    try {
+      if (isBotGroupAdmin(metadata, sock)) {
+        await sock.sendMessage(
+          jid,
+          {
+            delete: msg.key
+          }
+        );
+      }
+    } catch {}
+
+    await reply(
+      sock,
+      jid,
+      `🛡️ @${sender.split("@")[0]} links are restricted in this realm.`,
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // ANTI BAD WORD
+  // ----------------------------------------------------------
+
+  if (
+    protectionEnabled(jid, "antibadword") &&
+    containsBadword(text, group)
+  ) {
+    try {
+      if (isBotGroupAdmin(metadata, sock)) {
+        await sock.sendMessage(
+          jid,
+          {
+            delete: msg.key
+          }
+        );
+      }
+    } catch {}
+
+    await reply(
+      sock,
+      jid,
+      `🛡️ @${sender.split("@")[0]} that content is restricted.`,
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // ANTI STICKER
+  // ----------------------------------------------------------
+
+  if (
+    protectionEnabled(jid, "antisticker") &&
+    msg.message?.stickerMessage
+  ) {
+    try {
+      if (isBotGroupAdmin(metadata, sock)) {
+        await sock.sendMessage(
+          jid,
+          {
+            delete: msg.key
+          }
+        );
+      }
+    } catch {}
+
+    await reply(
+      sock,
+      jid,
+      "🛡️ Stickers are restricted in this realm.",
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // ANTI MENTION
+  // ----------------------------------------------------------
+
+  const mentioned =
+    getMentionedJids(msg);
+
+  if (
+    protectionEnabled(jid, "antimention") &&
+    mentioned.length > 5
+  ) {
+    await reply(
+      sock,
+      jid,
+      "🛡️ Mass mentions are restricted.",
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // ANTI TAG
+  // ----------------------------------------------------------
+
+  if (
+    protectionEnabled(jid, "antitag") &&
+    mentioned.length
+  ) {
+    await reply(
+      sock,
+      jid,
+      "🛡️ Tagging is restricted in this realm.",
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // ANTI SPAM / FLOOD
+  // ----------------------------------------------------------
+
+  if (
+    protectionEnabled(jid, "antispam") ||
+    protectionEnabled(jid, "antiflood")
+  ) {
+    const list =
+      rememberMessage(
+        jid,
+        sender,
+        text
+      );
+
+    const now = Date.now();
+
+    const recent =
+      list.filter(
+        item =>
+          now - item.time < 5000
+      );
+
+    const repeated =
+      recent.filter(
+        item =>
+          item.text === text
+      ).length;
+
+    if (
+      protectionEnabled(jid, "antiflood") &&
+      recent.length >= 6
+    ) {
+      await reply(
+        sock,
+        jid,
+        `🛡️ @${sender.split("@")[0]} flood protection triggered.`,
+        msg
+      );
+
+      if (
+        isBotGroupAdmin(metadata, sock)
+      ) {
+        try {
+          await sock.groupParticipantsUpdate(
+            jid,
+            [sender],
+            "remove"
+          );
+        } catch {}
+      }
+
+      return true;
+    }
+
+    if (
+      protectionEnabled(jid, "antispam") &&
+      repeated >= 3
+    ) {
+      await reply(
+        sock,
+        jid,
+        `🛡️ @${sender.split("@")[0]} spam protection triggered.`,
+        msg
+      );
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+// ------------------------------------------------------------
+// PROTECTION COMMANDS
+// ------------------------------------------------------------
+
+async function runProtectionCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  sender,
+  jid
+) {
+  if (!jid.endsWith("@g.us")) {
+    await reply(
+      sock,
+      jid,
+      reaperError(
+        "GROUP ONLY",
+        "Protection controls only work in groups."
+      ),
+      msg
+    );
+    return true;
+  }
+
+  const metadata =
+    await getGroupInfo(sock, jid);
+
+  if (!metadata) {
+    return true;
+  }
+
+  const group =
+    ensureGroupSettings(jid);
+
+  if (
+    !participantIsAdmin(
+      metadata,
+      sender
+    )
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperError(
+        "ADMIN ONLY",
+        "Only group administrators can change protection."
+      ),
+      msg
+    );
+    return true;
+  }
+
+  const protectionCommands = new Set([
+    "antilink",
+    "antibadword",
+    "antispam",
+    "antiflood",
+    "antibot",
+    "anticall",
+    "antidelete",
+    "antiedit",
+    "antiviewonce",
+    "antisticker",
+    "antitag",
+    "antimention",
+    "antigroup",
+    "antipromote",
+    "protection"
+  ]);
+
+  if (!protectionCommands.has(lower)) {
+    return false;
+  }
+
+  if (
+    args[0] &&
+    ["on", "off"].includes(
+      args[0].toLowerCase()
+    )
+  ) {
+    group[lower] =
+      args[0].toLowerCase() === "on";
+
+    saveSettings();
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "SECURITY UPDATED",
+        `${lower}: ${groupSettingDisplay(group[lower])}`
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  await reply(
+    sock,
+    jid,
+    reaperBox(
+      "REAPER SECURITY",
+      [
+        `${lower}: ${groupSettingDisplay(group[lower])}`,
+        "",
+        `Use ${getPrefix()}${lower} on/off`
+      ].join("\n")
+    ),
+    msg
+  );
+
+  return true;
+}
+
+
+// ============================================================
+// AI SYSTEM
+// ============================================================
+
+function isBotMentioned(msg, sock) {
+  const bot =
+    getBotJid(sock);
+
+  if (!bot) return false;
+
+  return getMentionedJids(msg)
+    .some(
+      jid =>
+        normalizeNumber(jid) ===
+        normalizeNumber(bot)
+    );
+}
+
+function isReplyToBot(msg, sock) {
+  const bot =
+    normalizeNumber(
+      getBotJid(sock)
+    );
+
+  const context =
+    msg.message?.extendedTextMessage?.contextInfo ||
+    msg.message?.imageMessage?.contextInfo ||
+    msg.message?.videoMessage?.contextInfo;
+
+  if (!context) {
+    return false;
+  }
+
+  const participant =
+    normalizeNumber(
+      context.participant || ""
+    );
+
+  return (
+    participant &&
+    bot &&
+    participant === bot
+  );
+}
+
+function shouldTriggerAI(
+  msg,
+  sock,
+  jid,
+  text
+) {
+  if (!text) return false;
+
+  if (!jid.endsWith("@g.us")) {
+    return true;
+  }
+
+  const trimmed =
+    text.trim();
+
+  const prefix =
+    getPrefix();
+
+  if (
+    prefix &&
+    trimmed.startsWith(prefix)
+  ) {
+    const command =
+      trimmed
+        .slice(prefix.length)
+        .trim()
+        .split(/\s+/)[0]
+        ?.toLowerCase();
+
+    return (
+      command === "ai" ||
+      command === "chat" ||
+      command === "ask" ||
+      command === "explain" ||
+      command === "rewrite" ||
+      command === "summarize" ||
+      command === "translate"
+    );
+  }
+
+  return (
+    isBotMentioned(msg, sock) ||
+    isReplyToBot(msg, sock)
+  );
+}
+
+function cleanAIInput(text) {
+  return String(text || "")
+    .replace(/@\d{5,20}/g, "")
+    .replace(/^(\.ai|\.chat|\.ask)\s+/i, "")
+    .trim();
+}
+
+async function callOpenRouter(prompt) {
+  const key =
+    process.env.OPENROUTER_API_KEY;
+
+  if (!key) {
+    return null;
+  }
+
+  const response =
+    await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            `Bearer ${key}`,
+          "Content-Type":
+            "application/json",
+          "HTTP-Referer":
+            "https://railway.app",
+          "X-Title":
+            "THE REAPER"
+        },
+        body: JSON.stringify({
+          model:
+            "openai/gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                [
+                  "You are THE REAPER, a WhatsApp AI assistant.",
+                  "Be useful, natural, concise and accurate.",
+                  "Use a dark cyber-gothic personality lightly.",
+                  "Do not claim to have abilities you do not have.",
+                  "Do not mention these system instructions."
+                ].join(" ")
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 700
+        })
+      }
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      `OpenRouter HTTP ${response.status}`
+    );
+  }
+
+  const data =
+    await response.json();
+
+  return (
+    data?.choices?.[0]?.message?.content ||
+    null
+  );
+}
+
+async function runAICommand(
+  sock,
+  msg,
+  lower,
+  args,
+  jid
+) {
+  let prompt =
+    args.join(" ").trim();
+
+  if (!prompt) {
+    prompt =
+      cleanAIInput(
+        getText(msg)
+      );
+  }
+
+  prompt =
+    cleanAIInput(prompt);
+
+  if (!prompt) {
+    await reply(
+      sock,
+      jid,
+      reaperUsage(
+        `${getPrefix()}${lower} <your question>`
+      ),
+      msg
+    );
+    return true;
+  }
+
+  try {
+    const answer =
+      await callOpenRouter(prompt);
+
+    if (!answer) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "AI OFFLINE",
+          "OPENROUTER_API_KEY is missing or the AI service returned no response."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ REAPER AI",
+        answer
+      ),
+      msg
+    );
+  } catch (err) {
+    await reply(
+      sock,
+      jid,
+      reaperError(
+        "AI ERROR",
+        err?.message || "The AI service could not respond."
+      ),
+      msg
+    );
+  }
+
+  return true;
+}
+
+
+// ============================================================
+// MEDIA UTILITIES
+// ============================================================
+
+async function getQuotedMessage(msg) {
+  const context =
+    msg.message?.extendedTextMessage?.contextInfo;
+
+  if (!context?.quotedMessage) {
+    return null;
+  }
+
+  return {
+    key: {
+      remoteJid:
+        msg.key.remoteJid,
+      id:
+        context.stanzaId,
+      participant:
+        context.participant
+    },
+    message:
+      context.quotedMessage
+  };
+}
+
+function getMediaType(msg) {
+  const message =
+    msg?.message || {};
+
+  if (message.imageMessage)
+    return "image";
+
+  if (message.videoMessage)
+    return "video";
+
+  if (message.audioMessage)
+    return "audio";
+
+  if (message.stickerMessage)
+    return "sticker";
+
+  if (message.documentMessage)
+    return "document";
+
+  return null;
+}
+
+async function downloadMessageMedia(
+  sock,
+  msg
+) {
+  try {
+    return await downloadMediaMessage(
+      msg,
+      "buffer",
+      {},
+      {
+        logger:
+          P({
+            level: "silent"
+          }),
+        reuploadRequest:
+          sock.updateMediaMessage
+      }
+    );
+  } catch {
+    return null;
+  }
+}
+
+
+// ------------------------------------------------------------
+// TTS
+// ------------------------------------------------------------
+
+async function runMediaCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  jid
+) {
+  const prefix =
+    getPrefix();
+
+  if (
+    lower === "tts" ||
+    lower === "say"
+  ) {
+    const text =
+      args.join(" ").trim();
+
+    if (!text) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}${lower} <text>`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      const url =
+        googleTTS.getAudioUrl(
+          text,
+          {
+            lang: "en",
+            slow: false,
+            host:
+              "https://translate.google.com"
+          }
+        );
+
+      await sock.sendMessage(
+        jid,
+        {
+          audio: {
+            url
+          },
+          mimetype:
+            "audio/mpeg",
+          ptt: true
+        },
+        {
+          quoted: msg
+        }
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "TTS FAILED",
+          err?.message || "Unable to create speech."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // QR
+  // ----------------------------------------------------------
+
+  if (lower === "qr") {
+    const value =
+      args.join(" ").trim();
+
+    if (!value) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}qr <text or link>`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      const buffer =
+        await QRCode.toBuffer(
+          value,
+          {
+            width: 700,
+            margin: 2
+          }
+        );
+
+      await sock.sendMessage(
+        jid,
+        {
+          image: buffer,
+          caption:
+            "☠️ *THE REAPER QR TERMINAL*"
+        },
+        {
+          quoted: msg
+        }
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "QR FAILED",
+          err?.message || "Unable to create QR."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // GET PROFILE PICTURE
+  // ----------------------------------------------------------
+
+  if (lower === "getpp") {
+    const target =
+      getMentionedJids(msg)[0] ||
+      getReplyJid(msg) ||
+      jid;
+
+    try {
+      const url =
+        await sock.profilePictureUrl(
+          target,
+          "image"
+        );
+
+      await sock.sendMessage(
+        jid,
+        {
+          image: {
+            url
+          },
+          caption:
+            `☠️ *REAPER PROFILE*\n${target.split("@")[0]}`
+        },
+        {
+          quoted: msg
+        }
+      );
+    } catch {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "PROFILE",
+          "No profile picture could be retrieved."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // SET PROFILE PICTURE
+  // ----------------------------------------------------------
+
+  if (lower === "setpp") {
+    if (!isOwner(jidFromMessage(msg))) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "OWNER ONLY",
+          "Only the bot owner can change THE REAPER profile."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const quoted =
+      await getQuotedMessage(msg);
+
+    const source =
+      quoted || msg;
+
+    if (
+      !getMediaType(source)
+    ) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}setpp\nReply to an image.`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const buffer =
+      await downloadMessageMedia(
+        sock,
+        source
+      );
+
+    if (!buffer) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "PROFILE",
+          "Unable to download the image."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      await sock.updateProfilePicture(
+        getBotJid(sock),
+        buffer
+      );
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "PROFILE UPDATED",
+          "THE REAPER profile picture has been changed."
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "PROFILE UPDATE",
+          err?.message || "Unable to update profile."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // TO AUDIO
+  // ----------------------------------------------------------
+
+  if (lower === "toaudio") {
+    const quoted =
+      await getQuotedMessage(msg);
+
+    const source =
+      quoted || msg;
+
+    if (
+      !source?.message?.videoMessage
+    ) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}toaudio\nReply to a video.`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    await reply(
+      sock,
+      jid,
+      reaperInfo(
+        "MEDIA",
+        "Video-to-audio conversion is handled by the downloader/media engine. Use `.ytmp3` for online media."
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // VIEW ONCE
+  // ----------------------------------------------------------
+
+  if (lower === "viewonce") {
+    const quoted =
+      await getQuotedMessage(msg);
+
+    if (!quoted) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}viewonce\nReply to media.`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const type =
+      getMediaType(quoted);
+
+    if (!type) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "MEDIA",
+          "The quoted message does not contain supported media."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const buffer =
+      await downloadMessageMedia(
+        sock,
+        quoted
+      );
+
+    if (!buffer) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "MEDIA",
+          "Unable to download the quoted media."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      if (type === "image") {
+        await sock.sendMessage(
+          jid,
+          {
+            image: buffer,
+            caption:
+              "☠️ Recovered media."
+          },
+          {
+            quoted: msg
+          }
+        );
+      } else if (type === "video") {
+        await sock.sendMessage(
+          jid,
+          {
+            video: buffer,
+            caption:
+              "☠️ Recovered media."
+          },
+          {
+            quoted: msg
+          }
+        );
+      } else {
+        await sock.sendMessage(
+          jid,
+          {
+            document: buffer,
+            mimetype:
+              "application/octet-stream",
+            fileName:
+              "reaper-media"
+          },
+          {
+            quoted: msg
+          }
+        );
+      }
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "MEDIA SEND",
+          err?.message || "Unable to send recovered media."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // STICKER
+  // ----------------------------------------------------------
+
+  if (lower === "sticker") {
+    const quoted =
+      await getQuotedMessage(msg);
+
+    const source =
+      quoted || msg;
+
+    if (
+      !source?.message?.imageMessage &&
+      !source?.message?.videoMessage
+    ) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}sticker\nReply to an image or short video.`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const buffer =
+      await downloadMessageMedia(
+        sock,
+        source
+      );
+
+    if (!buffer) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "STICKER",
+          "Unable to download the media."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      await sock.sendMessage(
+        jid,
+        {
+          sticker: buffer
+        },
+        {
+          quoted: msg
+        }
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "STICKER FAILED",
+          err?.message || "Unable to create sticker."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // UPLOAD
+  // ----------------------------------------------------------
+
+  if (lower === "upload") {
+    const quoted =
+      await getQuotedMessage(msg);
+
+    const source =
+      quoted || msg;
+
+    if (!getMediaType(source)) {
+      await reply(
+        sock,
+        jid,
+        reaperUsage(
+          `${prefix}upload\nReply to media.`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    const buffer =
+      await downloadMessageMedia(
+        sock,
+        source
+      );
+
+    if (!buffer) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "UPLOAD",
+          "Unable to download the media."
+        ),
+        msg
+      );
+      return true;
+    }
+
+    try {
+      const form =
+        new FormData();
+
+      form.append(
+        "reqtype",
+        "fileupload"
+      );
+
+      form.append(
+        "fileToUpload",
+        new Blob([buffer]),
+        "reaper-upload"
+      );
+
+      const response =
+        await fetch(
+          "https://catbox.moe/user/api.php",
+          {
+            method: "POST",
+            body: form
+          }
+        );
+
+      const url =
+        await response.text();
+
+      if (
+        !response.ok ||
+        !url.startsWith("http")
+      ) {
+        throw new Error(
+          "Upload service rejected the file."
+        );
+      }
+
+      await reply(
+        sock,
+        jid,
+        reaperBox(
+          "UPLOAD COMPLETE",
+          url
+        ),
+        msg
+      );
+    } catch (err) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "UPLOAD FAILED",
+          err?.message || "Unable to upload media."
+        ),
+        msg
+      );
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+
+// ============================================================
+// DOWNLOADER
+// ============================================================
+
+const DOWNLOAD_ALIASES = new Set([
+  "play",
+  "yt",
+  "ytmp3",
+  "ytmp4",
+  "tiktok",
+  "ig",
+  "igdl",
+  "facebook",
+  "fbdl",
+  "twitter",
+  "twitterdl",
+  "movie",
+  "music",
+  "song",
+  "video",
+  "media",
+  "socialdl",
+  "aio",
+  "download",
+  "dload"
+]);
+
+function downloaderMode(command) {
+  if (
+    command === "ytmp3" ||
+    command === "music" ||
+    command === "song"
+  ) {
+    return "audio";
+  }
+
+  if (
+    command === "ytmp4" ||
+    command === "video"
+  ) {
+    return "video";
+  }
+
+  return "auto";
+}
+
+function cleanFilename(value) {
+  return String(value || "reaper-media")
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
+    .slice(0, 100);
+}
+
+async function runDownloader(
+  sock,
+  msg,
+  command,
+  args,
+  jid
+) {
+  if (!DOWNLOAD_ALIASES.has(command)) {
+    return false;
+  }
+
+  const query =
+    args.join(" ").trim();
+
+  if (!query) {
+    await reply(
+      sock,
+      jid,
+      reaperUsage(
+        `${getPrefix()}${command} <YouTube URL or search>`
+      ),
+      msg
+    );
+    return true;
+  }
+
+  const mode =
+    downloaderMode(command);
+
+  const tempRoot =
+    path.resolve(
+      "./tmp/reaper-downloads"
+    );
+
+  fs.mkdirSync(
+    tempRoot,
+    {
+      recursive: true
+    }
+  );
+
+  const stamp =
+    `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+  const outputBase =
+    path.join(
+      tempRoot,
+      `${stamp}`
+    );
+
+  await reply(
+    sock,
+    jid,
+    reaperInfo(
+      "REAPER DOWNLOAD",
+      `Processing: *${query}*\nMode: *${mode.toUpperCase()}*`
+    ),
+    msg
+  );
+
+  try {
+    const common = {
+      noWarnings: true,
+      noPlaylist: true,
+      restrictFilenames: true,
+      output:
+        `${outputBase}.%(ext)s`
+    };
+
+    let options = {
+      ...common
+    };
+
+    if (mode === "audio") {
+      options = {
+        ...options,
+        extractAudio: true,
+        audioFormat: "mp3",
+        audioQuality: "128K"
+      };
+    } else if (mode === "video") {
+      options = {
+        ...options,
+        format:
+          "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best",
+        mergeOutputFormat: "mp4"
+      };
+    } else {
+      options = {
+        ...options,
+        format:
+          "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best",
+        mergeOutputFormat: "mp4"
+      };
+    }
+
+    const result =
+      await ytDlp(
+        query,
+        options
+      );
+
+    const files =
+      fs.readdirSync(
+        tempRoot
+      )
+      .filter(name =>
+        name.startsWith(stamp)
+      );
+
+    if (!files.length) {
+      throw new Error(
+        "Downloader completed without producing a media file."
+      );
+    }
+
+    const file =
+      path.join(
+        tempRoot,
+        files[0]
+      );
+
+    const stat =
+      fs.statSync(file);
+
+    const maxBytes =
+      50 * 1024 * 1024;
+
+    if (stat.size > maxBytes) {
+      throw new Error(
+        "The downloaded file is larger than the WhatsApp upload limit used by THE REAPER."
+      );
+    }
+
+    const ext =
+      path.extname(file)
+        .toLowerCase();
+
+    const filename =
+      cleanFilename(
+        path.basename(file)
+      );
+
+    if (
+      mode === "audio" ||
+      ext === ".mp3" ||
+      ext === ".m4a" ||
+      ext === ".opus" ||
+      ext === ".wav"
+    ) {
+      await sock.sendMessage(
+        jid,
+        {
+          audio:
+            fs.readFileSync(file),
+          mimetype:
+            "audio/mpeg",
+          fileName:
+            filename,
+          ptt: false
+        },
+        {
+          quoted: msg
+        }
+      );
+    } else {
+      await sock.sendMessage(
+        jid,
+        {
+          video:
+            fs.readFileSync(file),
+          mimetype:
+            "video/mp4",
+          fileName:
+            filename,
+          caption:
+            "☠️ *THE REAPER DOWNLOAD*"
+        },
+        {
+          quoted: msg
+        }
+      );
+    }
+
+    await reply(
+      sock,
+      jid,
+      reaperSuccess(
+        "DOWNLOAD COMPLETE",
+        "Media delivered."
+      ),
+      msg
+    );
+  } catch (err) {
+    await reply(
+      sock,
+      jid,
+      reaperError(
+        "DOWNLOAD FAILED",
+        err?.message ||
+          "The requested media could not be downloaded."
+      ),
+      msg
+    );
+  } finally {
+    try {
+      const files =
+        fs.readdirSync(
+          tempRoot
+        )
+        .filter(name =>
+          name.startsWith(stamp)
+        );
+
+      for (const file of files) {
+        try {
+          fs.unlinkSync(
+            path.join(
+              tempRoot,
+              file
+            )
+          );
+        } catch {}
+      }
+    } catch {}
+  }
+
+  return true;
+}
+
+
+// ============================================================
+// STORY / QUEST SYSTEM
+// ============================================================
+
+const STORY_CHAPTERS = [
+  {
+    title:
+      "Chapter I — The Awakening",
+    text:
+      "The realm falls silent. A black moon rises above the dead city. From beneath the ruins, THE REAPER opens his eyes."
+  },
+  {
+    title:
+      "Chapter II — Blood Moon",
+    text:
+      "The Blood Moon appears. Ancient souls begin crossing the boundary between worlds."
+  },
+  {
+    title:
+      "Chapter III — The Forgotten Gate",
+    text:
+      "A forgotten gate opens beneath the cathedral. Something older than death waits behind it."
+  },
+  {
+    title:
+      "Chapter IV — The Hollow King",
+    text:
+      "The Hollow King awakens and claims the shadows of the realm as his army."
+  },
+  {
+    title:
+      "Chapter V — The Last Scythe",
+    text:
+      "Only one weapon remains capable of ending the cycle: the Last Scythe."
+  },
+  {
+    title:
+      "Chapter VI — Reaper's End",
+    text:
+      "The final gate opens. The Reaper must choose between eternal rule and restoring the realm."
+  }
+];
+
+const STORY_DATA = {
+  realm:
+    "The Reaper Realm exists between life and death, where lost souls become warriors and ancient kings refuse to disappear.",
+  character:
+    "THE REAPER — Warden of the boundary. Armed with the Void Scythe and bound to the realm by an ancient oath.",
+  artifact:
+    "The Void Scythe — an artifact said to cut through curses, shadows and forgotten memories.",
+  relic:
+    "The Black Crown — a relic belonging to the Hollow King.",
+  boss:
+    "The Hollow King — ruler of the dead armies and guardian of the final gate.",
+  dungeon:
+    "The Dread Cathedral — a ruined structure filled with cursed knights and forbidden relics.",
+  encounter:
+    "A shadow crosses your path. It watches you silently before disappearing into the fog."
+};
+
+function ensureStory(user) {
+  if (!user.story) {
+    user.story = {
+      chapter: 0,
+      completed: false,
+      encounters: 0,
+      artifacts: [],
+      choices: []
+    };
+
+    saveUsers();
+  }
+
+  return user.story;
+}
+
+async function runStoryCommand(
+  sock,
+  msg,
+  lower,
+  args,
+  user,
+  jid
+) {
+  const story =
+    ensureStory(user);
+
+  if (lower === "story") {
+    const chapter =
+      STORY_CHAPTERS[
+        Math.min(
+          story.chapter,
+          STORY_CHAPTERS.length - 1
+        )
+      ];
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ THE REAPER CHRONICLES",
+        [
+          `Current chapter: *${story.chapter + 1}/${STORY_CHAPTERS.length}*`,
+          "",
+          `*${chapter.title}*`,
+          "",
+          chapter.text
+        ].join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "chapter" ||
+    lower === "journey"
+  ) {
+    const number =
+      Number(args[0]);
+
+    if (
+      Number.isInteger(number) &&
+      number >= 1 &&
+      number <= STORY_CHAPTERS.length
+    ) {
+      const chapter =
+        STORY_CHAPTERS[number - 1];
+
+      await reply(
+        sock,
+        jid,
+        reaperBox(
+          chapter.title,
+          chapter.text
+        ),
+        msg
+      );
+
+      return true;
+    }
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "CHAPTERS",
+        STORY_CHAPTERS
+          .map(
+            (chapter, index) =>
+              `${index + 1}. ${chapter.title}`
+          )
+          .join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      STORY_DATA,
+      lower
+    )
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        lower.toUpperCase(),
+        STORY_DATA[lower]
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (
+    lower === "quest" ||
+    lower === "mission"
+  ) {
+    const current =
+      Math.min(
+        story.chapter,
+        STORY_CHAPTERS.length - 1
+      );
+
+    const reward =
+      80 + current * 40;
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ ACTIVE QUEST",
+        [
+          `Objective: Continue ${STORY_CHAPTERS[current].title}`,
+          "",
+          "Complete the chapter by using:",
+          `${getPrefix()}chapter ${current + 1}`,
+          "",
+          `Reward: *${reward} XP + ${reward} coins*`
+        ].join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "encounter") {
+    story.encounters++;
+    story.choices.push(
+      "encounter"
+    );
+
+    addXP(
+      user,
+      25
+    );
+
+    user.coins += 20;
+    saveUsers();
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ ENCOUNTER",
+        [
+          STORY_DATA.encounter,
+          "",
+          "+25 XP",
+          "+20 coins"
+        ].join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  if (lower === "dungeon") {
+    const roll =
+      Math.random();
+
+    if (roll < 0.55) {
+      const reward =
+        Math.floor(
+          50 +
+          Math.random() * 100
+        );
+
+      user.coins += reward;
+      addXP(user, reward);
+
+      await reply(
+        sock,
+        jid,
+        reaperSuccess(
+          "DUNGEON CLEARED",
+          `You survived the Dread Cathedral.\n\n+${reward} XP\n+${reward} coins`
+        ),
+        msg
+      );
+    } else {
+      const loss =
+        Math.min(
+          user.coins,
+          20
+        );
+
+      user.coins -= loss;
+
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "DUNGEON FAILED",
+          `The shadows overwhelmed you.\n\n-${loss} coins`
+        ),
+        msg
+      );
+    }
+
+    saveUsers();
+    return true;
+  }
+
+  if (lower === "ending") {
+    if (
+      story.chapter <
+      STORY_CHAPTERS.length - 1
+    ) {
+      await reply(
+        sock,
+        jid,
+        reaperError(
+          "ENDING LOCKED",
+          `Complete chapter ${STORY_CHAPTERS.length} first.`
+        ),
+        msg
+      );
+      return true;
+    }
+
+    story.completed = true;
+    saveUsers();
+
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ THE FINAL ENDING",
+        [
+          "The final gate opens.",
+          "",
+          "The Reaper raises the Last Scythe.",
+          "The realm falls silent.",
+          "",
+          "*THE END IS ONLY THE BEGINNING.*"
+        ].join("\n")
+      ),
+      msg
+    );
+
+    return true;
+  }
+
+  return false;
+}
+
+
+// ============================================================
+// BLOCK 3 END
+// ============================================================
