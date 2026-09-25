@@ -853,7 +853,25 @@ async function runCommand(sock, msg, cmd, args, user, sender, isGroup) {
   lower === "summarize" ||
   lower === "translate"
 ) {
-  const prompt = args.join(" ").trim();
+  let prompt = args.join(" ").trim();
+
+if (lower === "translate") {
+  const parts = prompt.split(" ");
+  const targetLanguage = parts.shift();
+  const textToTranslate = parts.join(" ");
+
+  if (!targetLanguage || !textToTranslate) {
+    await reply(
+      sock,
+      jid,
+      `🦇 Usage:\n${prefix}translate <language> <text>\n\nExample:\n${prefix}translate Spanish hello`,
+      msg
+    );
+    return;
+  }
+
+  prompt = `Translate the following text into ${targetLanguage}. Return only the translation, without explanations:\n\n${textToTranslate}`;
+}
 
   if (!prompt) {
     await reply(
