@@ -875,7 +875,7 @@ async function runCommand(sock, msg, cmd, args, user, sender, isGroup) {
     await reply(
       sock,
       jid,
-      `🦇 Usage:\n\n${prefix}${lower} <YouTube URL or search term>`,
+      `🦇 Usage:\n\n${prefix}${lower} <URL or search term>`,
       msg
     );
     return;
@@ -904,12 +904,46 @@ async function runCommand(sock, msg, cmd, args, user, sender, isGroup) {
       searchQuery = `ytsearch1:${query}`;
     }
 
-    const result = await ytDlp(searchQuery, {
+    const isAudio = [
+      "ytmp3",
+      "song",
+      "music"
+    ].includes(lower);
+
+    const isVideo = [
+      "yt",
+      "ytmp4",
+      "play",
+      "video",
+      "tiktok",
+      "ig",
+      "igdl",
+      "facebook",
+      "fbdl",
+      "twitter",
+      "twitterdl"
+    ].includes(lower);
+
+    const options = {
       output: output,
       noPlaylist: true,
       restrictFilenames: true,
       maxFilesize: "50M"
-    });
+    };
+
+    if (isAudio) {
+      options.extractAudio = true;
+      options.audioFormat = "mp3";
+      options.audioQuality = 0;
+    } else if (isVideo) {
+      options.format = "best[ext=mp4]/best";
+      options.mergeOutputFormat = "mp4";
+    } else {
+      options.format = "best[ext=mp4]/best";
+      options.mergeOutputFormat = "mp4";
+    }
+
+    await ytDlp(searchQuery, options);
 
     const files = fs.readdirSync(tempDir)
       .filter(file => file.startsWith(safeName));
@@ -927,24 +961,33 @@ async function runCommand(sock, msg, cmd, args, user, sender, isGroup) {
     const filePath = path.join(tempDir, files[0]);
     const ext = path.extname(filePath).toLowerCase();
 
-    let mimetype = "video/mp4";
-
-    if ([".mp3", ".m4a", ".opus", ".wav"].includes(ext)) {
-      mimetype = "audio/mpeg";
-    }
-
-    await sock.sendMessage(
-      jid,
-      {
-        document: {
-          url: filePath
+    if (isAudio) {
+      await sock.sendMessage(
+        jid,
+        {
+          audio: {
+            url: filePath
+          },
+          mimetype: "audio/mpeg",
+          fileName: files[0],
+          ptt: false
         },
-        mimetype,
-        fileName: files[0],
-        caption: `🦇 ${BOT_NAME}\n\nDownloaded successfully.`
-      },
-      { quoted: msg }
-    );
+        { quoted: msg }
+      );
+    } else {
+      await sock.sendMessage(
+        jid,
+        {
+          video: {
+            url: filePath
+          },
+          mimetype: "video/mp4",
+          fileName: files[0],
+          caption: `🦇 ${BOT_NAME}\n\nDownloaded successfully.`
+        },
+        { quoted: msg }
+      );
+    }
 
     fs.unlinkSync(filePath);
 
@@ -960,8 +1003,7 @@ async function runCommand(sock, msg, cmd, args, user, sender, isGroup) {
   }
 
   return;
-      }
-
+    }
   if (ALL_COMMANDS.has(lower)) {
     await reply(sock, jid, `🦇 ${lower} is registered in THE REAPER. Its full provider-specific implementation is not enabled yet.`, msg);
     return;
