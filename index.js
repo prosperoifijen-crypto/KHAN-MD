@@ -844,20 +844,107 @@ async function runCommand(sock, msg, cmd, args, user, sender, isGroup) {
     return;
   }
 
-  if (lower === "ai" || lower === "chat" || lower === "ask" || lower === "explain" || lower === "rewrite" || lower === "summarize" || lower === "translate") {
-    const prompt = args.join(" ").trim();
-    if (!prompt) {
-      await reply(sock, jid, `🦇 Usage: ${lower} <text>`, msg);
-      return;
-    }
-    await reply(sock, jid,
-      `🦇 ${BOT_NAME} AI\n\n` +
-      `I received: "${prompt}"\n\n` +
-      `The command is registered. Connect your preferred AI API to enable live AI responses.`,
+  if (
+  lower === "ai" ||
+  lower === "chat" ||
+  lower === "ask" ||
+  lower === "explain" ||
+  lower === "rewrite" ||
+  lower === "summarize" ||
+  lower === "translate"
+) {
+  const prompt = args.join(" ").trim();
+
+  if (!prompt) {
+    await reply(
+      sock,
+      jid,
+      `🦇 Usage:\n${prefix}${lower} <your question or text>`,
       msg
     );
     return;
   }
+
+  const apiKey = process.env.OPENROUTER_API_KEY;
+
+  if (!apiKey) {
+    await reply(
+      sock,
+      jid,
+      "🦇 OPENROUTER_API_KEY is missing from Railway Variables.",
+      msg
+    );
+    return;
+  }
+
+  try {
+    await reply(sock, jid, "🦇 THE REAPER AI is thinking...", msg);
+
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://railway.app",
+          "X-Title": "THE REAPER"
+        },
+        body: JSON.stringify({
+          model: "openrouter/free",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are THE REAPER, a helpful WhatsApp AI assistant. Give clear, useful and concise answers."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ]
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("OpenRouter error:", data);
+
+      await reply(
+        sock,
+        jid,
+        `🦇 AI error: ${data?.error?.message || "Request failed."}`,
+        msg
+      );
+      return;
+    }
+
+    const answer =
+      data?.choices?.[0]?.message?.content ||
+      "🦇 The AI returned no response.";
+
+    await reply(
+      sock,
+      jid,
+      `🦇 *THE REAPER AI*\n\n${answer}`,
+      msg
+    );
+
+  } catch (error) {
+    console.error("AI ERROR:", error);
+
+    await reply(
+      sock,
+      jid,
+      `🦇 AI connection failed.\n\n${error?.message || "Unknown error"}`,
+      msg
+    );
+  }
+
+  return;
+          }
 
   if ([
   "play", "yt", "ytmp3", "ytmp4",
