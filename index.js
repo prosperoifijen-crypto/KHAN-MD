@@ -15,7 +15,7 @@ const DEFAULT_PREFIX = ".";
 const DATA_DIR = "./data";
 const DATA_FILE = path.join(DATA_DIR, "users.json");
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
-const BANNER_FILE = "./assets/reaper-banner.jpg";
+const BANNER_FILE = "./assets/The Reaper Command Menu.png";
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
