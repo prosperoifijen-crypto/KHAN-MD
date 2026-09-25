@@ -3475,11 +3475,6 @@ async function runGroupCommand(
       reaperInfo(
         key.toUpperCase(),
         `${key}: ${groupSettingDisplay(group[key])}\n\nUse ${prefix}${key} on/off`
-    
-// ============================================================
-// THE REAPER — BLOCK 4/4
-// FINAL ROUTER • OWNER • EVENTS • AI AUTO-REPLY • CONNECTION
-// ============================================================
 
 // ------------------------------------------------------------
 // REQUIRED RUNTIME HELPERS
