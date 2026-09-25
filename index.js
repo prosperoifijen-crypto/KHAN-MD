@@ -860,44 +860,107 @@ async function runCommand(sock, msg, cmd, args, user, sender, isGroup) {
   }
 
   if ([
-    "play","yt","ytmp3","ytmp4","tiktok","ig","igdl","facebook","fbdl","twitter","twitterdl",
-    "movie","music","song","video","media","socialdl","aio","download","dload"
-  ].includes(lower)) {
-    await reply(sock, jid,
-      `🦇 ${lower} is registered.\n\n` +
-      `A real downloader provider/API must be connected before this command can download external media. I will not fake a download.`,
+  "play", "yt", "ytmp3", "ytmp4",
+  "tiktok", "ig", "igdl",
+  "facebook", "fbdl",
+  "twitter", "twitterdl",
+  "movie", "music", "song", "video",
+  "media", "socialdl", "aio",
+  "download", "dload"
+].includes(lower)) {
+
+  const query = args.join(" ").trim();
+
+  if (!query) {
+    await reply(
+      sock,
+      jid,
+      `🦇 Usage:\n\n${prefix}${lower} <YouTube URL or search term>`,
       msg
     );
     return;
   }
 
-  if (lower === "shutdown" || lower === "restart") {
-    if (!isOwner(sender)) {
-      await reply(sock, jid, "🦇 Owner only.", msg);
-      return;
-    }
-    await reply(sock, jid, `🦇 ${lower === "shutdown" ? "Shutting down" : "Restarting"}...`, msg);
-    setTimeout(() => process.exit(0), 500);
-    return;
+  const tempDir = "./downloads";
+
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
   }
 
-  if (lower === "cleansession") {
-    if (!isOwner(sender)) {
-      await reply(sock, jid, "🦇 Owner only.", msg);
+  const safeName = `reaper_${Date.now()}`;
+  const output = path.join(tempDir, `${safeName}.%(ext)s`);
+
+  try {
+    await reply(
+      sock,
+      jid,
+      `🦇 THE REAPER is processing...\n\n🔎 ${query}`,
+      msg
+    );
+
+    let searchQuery = query;
+
+    if (!/^https?:\/\//i.test(query)) {
+      searchQuery = `ytsearch1:${query}`;
+    }
+
+    const result = await ytDlp(searchQuery, {
+      output: output,
+      noPlaylist: true,
+      restrictFilenames: true,
+      maxFilesize: "50M"
+    });
+
+    const files = fs.readdirSync(tempDir)
+      .filter(file => file.startsWith(safeName));
+
+    if (!files.length) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Download failed.\n\nNo media file was produced.`,
+        msg
+      );
       return;
     }
-    await reply(sock, jid, "🦇 Session cleanup is disabled while the bot is connected so your pairing is not accidentally destroyed.", msg);
-    return;
+
+    const filePath = path.join(tempDir, files[0]);
+    const ext = path.extname(filePath).toLowerCase();
+
+    let mimetype = "video/mp4";
+
+    if ([".mp3", ".m4a", ".opus", ".wav"].includes(ext)) {
+      mimetype = "audio/mpeg";
+    }
+
+    await sock.sendMessage(
+      jid,
+      {
+        document: {
+          url: filePath
+        },
+        mimetype,
+        fileName: files[0],
+        caption: `🦇 ${BOT_NAME}\n\nDownloaded successfully.`
+      },
+      { quoted: msg }
+    );
+
+    fs.unlinkSync(filePath);
+
+  } catch (error) {
+    console.error("YT-DLP ERROR:", error);
+
+    await reply(
+      sock,
+      jid,
+      `🦇 Download failed.\n\n${error?.message || "Unknown yt-dlp error"}`,
+      msg
+    );
   }
 
-  if (lower === "sudo" || lower === "block" || lower === "unblock" || lower === "ban" || lower === "unban" || lower === "broadcast") {
-    if (!isOwner(sender)) {
-      await reply(sock, jid, "🦇 Owner only.", msg);
-      return;
-    }
-    await reply(sock, jid, `🦇 ${lower} is owner-only and registered.`, msg);
-    return;
-  }
+  return;
+      }
 
   if (ALL_COMMANDS.has(lower)) {
     await reply(sock, jid, `🦇 ${lower} is registered in THE REAPER. Its full provider-specific implementation is not enabled yet.`, msg);
