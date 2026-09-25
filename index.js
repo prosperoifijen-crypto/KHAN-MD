@@ -178,7 +178,7 @@ function ownerLink() {
 const COMMANDS = {
   GENERAL: [
     "menu","reaper","ping","alive","botinfo","runtime","owner","repo","support","status",
-    "profile","help","commands","uptime","version","prefix","jid","chatid","groupinfo","about"
+    "profile","help","commands","uptime","version","prefix","jid","chatid","groupinfo","about",
     "weather","time","define","wiki","calc","shorturl","ip","uuid",
 "base64","unbase64","password",
   ],
