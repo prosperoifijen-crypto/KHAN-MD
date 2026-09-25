@@ -355,6 +355,413 @@ async function runCommand(sock, msg, cmd, args, user, sender, isGroup) {
   }
 
   await react(sock, jid, msg.key, "🦇");
+  // ===== REAPER UTILITY COMMANDS =====
+
+  if (lower === "weather") {
+    const city = args.join(" ").trim();
+
+    if (!city) {
+      await reply(sock, jid, `🦇 Usage:\n${getPrefix()}weather <city>\n\nExample:\n${getPrefix()}weather Lagos`, msg);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://wttr.in/${encodeURIComponent(city)}?format=j1`
+      );
+
+      if (!response.ok) throw new Error("Weather service unavailable.");
+
+      const data = await response.json();
+      const current = data.current_condition?.[0];
+
+      if (!current) throw new Error("Weather data not found.");
+
+      await reply(
+        sock,
+        jid,
+        `🦇 *WEATHER — ${city}*\n\n` +
+        `🌡️ Temperature: ${current.temp_C}°C\n` +
+        `🤒 Feels like: ${current.FeelsLikeC}°C\n` +
+        `💧 Humidity: ${current.humidity}%\n` +
+        `💨 Wind: ${current.windspeedKmph} km/h\n` +
+        `☁️ Condition: ${current.weatherDesc?.[0]?.value || "Unknown"}`,
+        msg
+      );
+    } catch (error) {
+      await reply(sock, jid, `🦇 Weather failed.\n\n${error.message}`, msg);
+    }
+
+    return;
+  }
+
+  if (lower === "time") {
+    const city = args.join(" ").trim();
+
+    if (!city) {
+      await reply(sock, jid, `🦇 Usage:\n${getPrefix()}time <city>\n\nExample:\n${getPrefix()}time Lagos`, msg);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://www.timeapi.io/api/Time/current/zone?timeZone=${encodeURIComponent(city)}`
+      );
+
+      if (!response.ok) throw new Error("Time service unavailable.");
+
+      const data = await response.json();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 *TIME — ${city}*\n\n` +
+        `🕐 Time: ${data.time}\n` +
+        `📅 Date: ${data.date}\n` +
+        `🌍 Day: ${data.dayOfWeek}`,
+        msg
+      );
+    } catch {
+      await reply(
+        sock,
+        jid,
+        `🦇 Could not find that timezone.\n\nExample:\n${getPrefix()}time Africa/Lagos`,
+        msg
+      );
+    }
+
+    return;
+  }
+
+  if (lower === "define") {
+    const word = args.join(" ").trim();
+
+    if (!word) {
+      await reply(sock, jid, `🦇 Usage: ${getPrefix()}define <word>`, msg);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`
+      );
+
+      if (!response.ok) throw new Error("Word not found.");
+
+      const data = await response.json();
+      const entry = data[0];
+      const meaning = entry.meanings?.[0];
+      const definition = meaning?.definitions?.[0];
+
+      await reply(
+        sock,
+        jid,
+        `🦇 *DICTIONARY*\n\n` +
+        `📖 Word: ${entry.word}\n` +
+        `🔤 Type: ${meaning?.partOfSpeech || "Unknown"}\n\n` +
+        `📚 ${definition?.definition || "No definition found."}`,
+        msg
+      );
+    } catch {
+      await reply(sock, jid, `🦇 Definition not found for "${word}".`, msg);
+    }
+
+    return;
+  }
+
+  if (lower === "wiki") {
+    const topic = args.join(" ").trim();
+
+    if (!topic) {
+      await reply(sock, jid, `🦇 Usage: ${getPrefix()}wiki <topic>`, msg);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`
+      );
+
+      if (!response.ok) throw new Error("Topic not found.");
+
+      const data = await response.json();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 *WIKIPEDIA*\n\n` +
+        `📖 ${data.title}\n\n` +
+        `${data.extract || "No summary available."}`,
+        msg
+      );
+    } catch {
+      await reply(sock, jid, `🦇 Wikipedia topic not found: ${topic}`, msg);
+    }
+
+    return;
+  }
+
+  if (lower === "calc" || lower === "calculate") {
+    const expression = args.join(" ").trim();
+
+    if (!expression) {
+      await reply(sock, jid, `🦇 Usage: ${getPrefix()}calc 25 * 8`, msg);
+      return;
+    }
+
+    if (!/^[0-9+\-*/().%\s]+$/.test(expression)) {
+      await reply(sock, jid, "🦇 Only basic mathematical expressions are allowed.", msg);
+      return;
+    }
+
+    try {
+      const result = Function(`"use strict"; return (${expression})`)();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 *CALCULATOR*\n\n🧮 ${expression}\n\n= *${result}*`,
+        msg
+      );
+    } catch {
+      await reply(sock, jid, "🦇 Invalid calculation.", msg);
+    }
+
+    return;
+  }
+
+  if (lower === "qr") {
+    const text = args.join(" ").trim();
+
+    if (!text) {
+      await reply(sock, jid, `🦇 Usage: ${getPrefix()}qr <text>`, msg);
+      return;
+    }
+
+    try {
+      const qrBuffer = await QRCode.toBuffer(text);
+
+      await sock.sendMessage(
+        jid,
+        {
+          image: qrBuffer,
+          caption: `🦇 THE REAPER QR\n\n${text}`
+        },
+        { quoted: msg }
+      );
+    } catch (error) {
+      await reply(sock, jid, `🦇 QR generation failed.\n\n${error.message}`, msg);
+    }
+
+    return;
+  }
+
+  if (lower === "tts" || lower === "say") {
+    const text = args.join(" ").trim();
+
+    if (!text) {
+      await reply(sock, jid, `🦇 Usage:\n${getPrefix()}${lower} <text>`, msg);
+      return;
+    }
+
+    try {
+      const audioUrl = googleTTS.getAudioUrl(text, {
+        lang: "en",
+        slow: false,
+        host: "https://translate.google.com"
+      });
+
+      await sock.sendMessage(
+        jid,
+        {
+          audio: { url: audioUrl },
+          mimetype: "audio/mpeg",
+          ptt: false
+        },
+        { quoted: msg }
+      );
+    } catch (error) {
+      await reply(sock, jid, `🦇 TTS failed.\n\n${error.message}`, msg);
+    }
+
+    return;
+  }
+
+  if (lower === "shorturl") {
+    const url = args[0];
+
+    if (!url || !/^https?:\/\//i.test(url)) {
+      await reply(
+        sock,
+        jid,
+        `🦇 Usage:\n${getPrefix()}shorturl https://example.com`,
+        msg
+      );
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`
+      );
+
+      if (!response.ok) throw new Error("Shortener unavailable.");
+
+      const shortUrl = await response.text();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 *SHORT URL*\n\n🔗 ${shortUrl}`,
+        msg
+      );
+    } catch (error) {
+      await reply(sock, jid, `🦇 URL shortening failed.\n\n${error.message}`, msg);
+    }
+
+    return;
+  }
+
+  if (lower === "ip") {
+    try {
+      const response = await fetch("https://api.ipify.org?format=json");
+      const data = await response.json();
+
+      await reply(
+        sock,
+        jid,
+        `🦇 *SERVER IP*\n\n🌐 ${data.ip}`,
+        msg
+      );
+    } catch {
+      await reply(sock, jid, "🦇 Could not retrieve the server IP.", msg);
+    }
+
+    return;
+  }
+
+  if (lower === "uuid") {
+    const id = crypto.randomUUID();
+
+    await reply(
+      sock,
+      jid,
+      `🦇 *UUID GENERATED*\n\n${id}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "base64") {
+    const text = args.join(" ").trim();
+
+    if (!text) {
+      await reply(sock, jid, `🦇 Usage: ${getPrefix()}base64 <text>`, msg);
+      return;
+    }
+
+    const encoded = Buffer.from(text, "utf8").toString("base64");
+
+    await reply(
+      sock,
+      jid,
+      `🦇 *BASE64 ENCODE*\n\n${encoded}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "unbase64") {
+    const text = args.join(" ").trim();
+
+    if (!text) {
+      await reply(sock, jid, `🦇 Usage: ${getPrefix()}unbase64 <base64>`, msg);
+      return;
+    }
+
+    try {
+      const decoded = Buffer.from(text, "base64").toString("utf8");
+
+      await reply(
+        sock,
+        jid,
+        `🦇 *BASE64 DECODE*\n\n${decoded}`,
+        msg
+      );
+    } catch {
+      await reply(sock, jid, "🦇 Invalid Base64 text.", msg);
+    }
+
+    return;
+  }
+
+  if (lower === "password" || lower === "genpass") {
+    const length = Math.min(
+      Math.max(parseInt(args[0], 10) || 16, 8),
+      64
+    );
+
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+
+    let password = "";
+
+    for (let i = 0; i < length; i++) {
+      password += chars[Math.floor(Math.random() * chars.length)];
+    }
+
+    await reply(
+      sock,
+      jid,
+      `🦇 *PASSWORD GENERATED*\n\n🔐 ${password}\n\nLength: ${length}`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "quote") {
+    const quotes = [
+      "The night is darkest before the dawn.",
+      "Discipline creates the power that motivation cannot maintain.",
+      "Small steps become great journeys.",
+      "What you build today becomes your strength tomorrow.",
+      "Silence can be louder than words."
+    ];
+
+    await reply(
+      sock,
+      jid,
+      `🦇 *REAPER QUOTE*\n\n“${random(quotes)}”`,
+      msg
+    );
+
+    return;
+  }
+
+  if (lower === "meme") {
+    try {
+      const response = await fetch("https://meme-api.com/gimme");
+      const data = await response.json();
+
+      if (!data?.url) throw new Error("No meme returned.");
+
+      await sock.sendMessage(
+        jid,
+        {
+          image: { url: data.url },
+          caption: `🦇 ${data.title || "THE REAPER MEME"}`
+        },
+        { quoted: msg }
+      );
+    } catch (error) {
+      await reply(sock, jid, `🦇 Meme failed.\n\n${error.message}`, msg);
+    }
+
+    return;
+  }
 
   if (lower === "reaper" || lower === "alive" || lower === "status") {
     await reply(sock, jid,
