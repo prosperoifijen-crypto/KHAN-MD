@@ -217,7 +217,7 @@ const COMMANDS = {
   ],
   "AI & MEDIA": [
     "ai","chat","ask","explain","rewrite","summarize","translate","tts","say","sticker","toimage",
-    "toaudio","removebg","getpp","setpp","take","viewonce","qr","wallpaper","upload"
+    "toaudio","removebg","getpp","setpp","take","viewonce","qr","wallpaper","upload""meme","quote",
   ],
   DOWNLOADER: [
     "play","yt","ytmp3","ytmp4","tiktok","ig","igdl","facebook","fbdl","twitter","twitterdl",
