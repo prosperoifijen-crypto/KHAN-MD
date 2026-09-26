@@ -1,6 +1,4 @@
-from pathlib import Path
-
-code = r'''import makeWASocket, {
+  code = r'''import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
