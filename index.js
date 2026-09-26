@@ -2611,7 +2611,30 @@ async function runGroupCommand(
 
   const group = ensureGroupSettings(jid);
   const prefix = getPrefix();
+  if (lower === "menu") {
+    const sections = Object.entries(COMMANDS)
+      .map(([category, commands]) =>
+        `┃ *${category}*
+┃ ${commands.map(command => `${prefix}${command}`).join(" • ")}`
+      )
+      .join("\n\n");
 
+    await reply(
+      sock,
+      jid,
+      reaperBox(
+        "☠️ THE REAPER MENU",
+        `┃ ⚡ Version: ${VERSION}
+┃ 📚 Commands: ${ALL_COMMANDS.size}
+┃ ⌨️ Prefix: ${prefix}
+
+${sections}`
+      ),
+      msg
+    );
+
+    return true;
+           }
   // ----------------------------------------------------------
   // INFORMATION
   // ----------------------------------------------------------
