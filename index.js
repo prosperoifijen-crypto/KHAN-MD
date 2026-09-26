@@ -1,7 +1,8 @@
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
-  downloadContentFromMessage
+  downloadContentFromMessage,
+  fetchLatestWaWebVersion
 } from "@whiskeysockets/baileys";
 
 import P from "pino";
