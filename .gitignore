@@ -6,3 +6,5 @@ assets/*.jpg
 assets/*.jpeg
 assets/*.png
 .env
+
+!assets/THE_REAPER_MD_BOT_BANNER.png
