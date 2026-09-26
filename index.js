@@ -1,8 +1,8 @@
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
-  downloadContentFromMessage,
-  fetchLatestWaWebVersion
+  fetchLatestWaWebVersion,
+  downloadContentFromMessage
 } from "@whiskeysockets/baileys";
 
 import P from "pino";
@@ -21,9 +21,9 @@ const __dirname = path.dirname(__filename);
    THE REAPER — FINAL CORE
    ========================================================= */
 
-const BOT_NAME = "THE REAPER";
+const BOT_NAME = "THE REAPER MD";
 const OWNER_NAME = "Reaper";
-const VERSION = "3.2.1";
+const VERSION = "4.0.0";
 const DEFAULT_PREFIX = ".";
 const DATA_DIR = path.join(__dirname, "data");
 const DOWNLOAD_DIR = path.join(__dirname, "downloads");
@@ -235,44 +235,71 @@ function formatDuration(ms) {
    REAPER RESPONSE SYSTEM
    ========================================================= */
 
+function reaperHeader() {
+  return [
+    `*╔═━━━━━━━✦ ☠️ ✦━━━━━━━═❐*`,
+    `*┃ 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁 𝙼𝙳*`,
+    `*╚═━━━━━━━✦ ☠️ ✦━━━━━━━═❐*`
+  ].join("\n");
+}
+
 function reaperBox(title, body = "") {
-  return (
-    `╔═══〔 🦇 ${title} 〕═══╗\n` +
-    `${body}\n` +
-    `╚══════════════════════╝`
-  );
+  return [
+    reaperHeader(),
+    "",
+    `*┏━❐〔 ${title} 〕━┈❐`,
+    body,
+    `*┗━━━━━━━━━━━━━━━━┈❐*`,
+    "",
+    `*☠️ 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁 𝙼𝙳*`
+  ].join("\n");
 }
 
 function reaperSuccess(title, body = "") {
-  return (
-    `🦇 *${title}*\n\n` +
-    `${body}\n\n` +
-    `☠️ *THE REAPER*`
-  );
+  return [
+    reaperHeader(),
+    "",
+    `*╔═━━━━━━━━━━━━━━━━━❐*`,
+    `*┃𖤍 *${title}*`,
+    ...String(body || "").split("\n").map(x => `*┃➺│ ${x}*`),
+    `*╚═━━━━━━━━━━━━━━━━━❐*`,
+    "",
+    `*⚙️ 𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁*`
+  ].join("\n");
 }
 
-function reaperError(body = "") {
-  return (
-    `🩸 *REAPER ERROR*\n\n` +
-    `${body}\n\n` +
-    `☠️ Check the command and try again.`
-  );
+function reaperError(title = "REAPER ERROR", body = "") {
+  if (!body) {
+    body = title;
+    title = "SYSTEM ERROR";
+  }
+  return [
+    reaperHeader(),
+    "",
+    `*╔═━━━━━━━━━━━━━━━━━❐*`,
+    `*┃𖤍 *${title}* ⚠️`,
+    ...String(body || "").split("\n").map(x => `*┃➺│ ${x}*`),
+    `*╚═━━━━━━━━━━━━━━━━━❐*`,
+    "",
+    `*☠️ 𝚄𝚂𝙴 ${getPrefix()}𝙼𝙴𝙽𝚄 𝙵𝙾𝚁 𝙷𝙴𝙻𝙿.*`
+  ].join("\n");
 }
 
 function reaperInfo(title, body = "") {
-  return (
-    `🦇 *${title}*\n\n` +
-    `${body}`
-  );
+  return [
+    reaperHeader(),
+    "",
+    `*╔═━━━━━━━━━━━━━━━━━❐*`,
+    `*┃𖤍 *${title}*`,
+    ...String(body || "").split("\n").map(x => `*┃➺│ ${x}*`),
+    `*╚═━━━━━━━━━━━━━━━━━❐*`
+  ].join("\n");
 }
 
 function reaperUsage(command, example = "") {
-  return (
-    `🦇 *COMMAND USAGE*\n\n` +
-    `Usage: ${getPrefix()}${command}\n` +
-    (example
-      ? `Example: ${getPrefix()}${example}`
-      : "")
+  return reaperError(
+    "COMMAND USAGE",
+    `Use: ${getPrefix()}${command}${example ? `\nExample: ${getPrefix()}${example}` : ""}`
   );
 }
 
@@ -899,6 +926,92 @@ async function requireAdmin(
   return metadata;
 }
 
+async function requireBotAdmin(
+  sock,
+  jid,
+  sender,
+  msg
+) {
+  const metadata =
+    await requireAdmin(
+      sock,
+      jid,
+      sender,
+      msg
+    );
+
+  if (!metadata) {
+    return null;
+  }
+
+  if (
+    !(await botIsAdmin(
+      sock,
+      metadata
+    ))
+  ) {
+    await reply(
+      sock,
+      jid,
+      reaperError(
+        "I need to be a group admin to perform this action."
+      ),
+      msg
+    );
+
+    return null;
+  }
+
+  return metadata;
+}
+
+/* =========================================================
+   MODE SYSTEM
+   ========================================================= */
+
+function getBotMode() {
+  return settings.mode === "private"
+    ? "private"
+    : "public";
+}
+
+function isPrivateMode() {
+  return getBotMode() === "private";
+}
+
+function setBotMode(mode) {
+  const value =
+    String(mode || "")
+      .toLowerCase();
+
+  if (
+    !["public", "private"]
+      .includes(value)
+  ) {
+    return false;
+  }
+
+  settings.mode = value;
+
+  saveSettings();
+
+  return true;
+}
+
+function getModeDisplay() {
+  return isPrivateMode()
+    ? "🔒 PRIVATE"
+    : "🌍 PUBLIC";
+}
+
+function canUseBot(jid) {
+  if (!isPrivateMode()) {
+    return true;
+  }
+
+  return isOwner(jid);
+}
+
 /* =========================================================
    COMMAND COOLDOWNS
    ========================================================= */
@@ -993,191 +1106,56 @@ function checkCooldown(
 
 const COMMANDS = {
   GENERAL: [
-    "menu",
-    "reaper",
-    "ping",
-    "alive",
-    "botinfo",
-    "runtime",
-    "owner",
-    "repo",
-    "support",
-    "status",
-    "profile",
-    "help",
-    "commands",
-    "uptime",
-    "version",
-    "prefix",
-    "jid",
-    "chatid",
-    "groupinfo",
-    "about",
-    "weather",
-    "time",
-    "define",
-    "wiki",
-    "calc",
-    "shorturl",
-    "ip",
-    "uuid",
-    "base64",
-    "unbase64",
-    "password"
+    "menu","reaper","ping","alive","botinfo","runtime","owner","repo","support","status","profile","help","commands","uptime","version","prefix","jid","chatid","groupinfo","about","weather","time","define","wiki","calc","shorturl","ip","uuid","base64","unbase64","password"
   ],
-
   "REAPER SYSTEM": [
-    "rank",
-    "level",
-    "xp",
-    "coins",
-    "daily",
-    "claim",
-    "hunt",
-    "mission",
-    "quest",
-    "train",
-    "power",
-    "blood",
-    "soul",
-    "shadow",
-    "ritual",
-    "summon",
-    "curse",
-    "bless",
-    "reaperstats",
-    "achievements"
+    "rank","level","xp","coins","daily","claim","hunt","mission","quest","train","power","blood","soul","shadow","ritual","summon","curse","bless","reaperstats","achievements"
   ],
-
   BATTLE: [
-    "fight",
-    "duel",
-    "battle",
-    "challenge",
-    "attack",
-    "defend",
-    "heal",
-    "weapon",
-    "armor",
-    "skills",
-    "powers",
-    "boss",
-    "raid",
-    "arena",
-    "war",
-    "revenge",
-    "streak",
-    "damage",
-    "battlelog",
-    "battlerank"
+    "fight","duel","battle","challenge","attack","defend","heal","weapon","armor","skills","powers","boss","raid","arena","war","revenge","streak","damage","battlelog","battlerank"
   ],
-
   GAMES: [
-    "dice",
-    "guess",
-    "rps",
-    "trivia",
-    "quiz",
-    "blackjack",
-    "slots",
-    "roulette",
-    "coinflip",
-    "higherlower",
-    "hangman",
-    "tictactoe",
-    "connect4",
-    "snake",
-    "memory",
-    "typing",
-    "reaction",
-    "quickmath",
-    "numberguess",
-    "wordshuffle",
-    "sequence",
-    "truefalse",
-    "colorhunt",
-    "luckywheel",
-    "casino",
-    "crash",
-    "clicker",
-    "taprush",
-    "target",
-    "mafia",
-    "penalty",
-    "rockpaperscissors",
-    "gamestats",
-    "leaderboard",
-    "gamecoins"
+    "dice","guess","rps","trivia","quiz","blackjack","slots","roulette","coinflip","higherlower","hangman","tictactoe","connect4","snake","memory","typing","reaction","quickmath","numberguess","wordshuffle","sequence","truefalse","colorhunt","luckywheel","casino","crash","clicker","taprush","target","mafia","penalty","rockpaperscissors","gamestats","leaderboard","gamecoins"
   ],
-
   ECONOMY: [
-    "balance",
-    "wallet",
-    "coins",
-    "daily",
-    "weekly",
-    "monthly",
-    "work",
-    "crime",
-    "rob",
-    "give",
-    "pay",
-    "shop",
-    "buy",
-    "sell",
-    "inventory",
-    "item",
-    "deposit",
-    "withdraw",
-    "rich",
-    "economy"
+    "balance","wallet","coins","daily","weekly","monthly","work","crime","rob","give","pay","shop","buy","sell","inventory","item","deposit","withdraw","rich","economy"
   ],
-
   "GROUP MANAGEMENT": [
-    "groupinfo",
-    "admins",
-    "members",
-    "membercount",
-    "groupid",
-    "groupjid",
-    "groupname",
-    "groupdesc",
-    "setgroupname",
-    "setgroupdesc",
-    "setgrouppic",
-    "getgrouppic",
-    "add",
-    "remove",
-    "kick",
-    "promote",
-    "demote",
-    "warn",
-    "warnings",
-    "clearwarn",
-    "mute",
-    "unmute",
-    "tagall",
-    "hidetag",
-    "tagadmins",
-    "tagmembers",
-    "welcome",
-    "goodbye",
-    "setwelcome",
-    "setgoodbye",
-    "setgrouppic",
-    "getgrouppic",
-    "open",
-    "close",
-    "lock",
-    "unlock",
-    "invite",
-    "revoke",
-    "gcstatus"
+    "groupinfo","admins","members","membercount","groupid","groupjid","groupname","groupdesc","setgroupname","setgroupdesc","setgrouppic","getgrouppic","add","remove","kick","promote","demote","warn","warnings","clearwarn","mute","unmute","tagall","hidetag","tagadmins","tagmembers","welcome","goodbye","setwelcome","setgoodbye","open","close","lock","unlock","invite","revoke","gcstatus","hijack","unhijack"
+  ],
+  PROTECTION: [
+    "antilink","antibadword","antispam","antiflood","antibot","anticall","antidelete","antiedit","antiviewonce","antisticker","antitag","antimention","antipromote"
+  ],
+  AI: [
+    "ai","chat","ask","explain","rewrite","summarize","translate"
+  ],
+  DOWNLOADER: [
+    "play","yt","ytmp3","ytmp4","tiktok","ig","igdl","facebook","fbdl","twitter","twitterdl","movie","music","song","video","media","socialdl","aio","download","dload"
+  ],
+  MEDIA: [
+    "sticker","toimage","tomp3","tovideo","compress","gif","tts"
+  ],
+  FUN: [
+    "fun","joke","quote","meme","ship","love","rate","roast","compliment","truth","dare","8ball","fact"
+  ],
+  OWNER: [
+    "broadcast","restart","shutdown","setprefix","setmenu","setmenuimage","setmenuaudio","addxp","addcoins","setrank","block","unblock","ban","unban","sudo","reload","cleansession","userstats","botsettings"
+  ],
+  PAIRING: [
+    "pair","session","logout"
+  ],
+  NEWSLETTER: [
+    "newsletter","followchannel","unfollowchannel"
+  ],
+  BUGS: [
+    "bug","report","feedback"
+  ],
+  OTHER: [
+    "mode"
   ]
 };
-const ALL_COMMANDS = new Set(
-  Object.values(COMMANDS).flat()
-);
+
+const ALL_COMMANDS = new Set(Object.values(COMMANDS).flat());
 
 /* =========================================================
    COMMAND ENGINE — BLOCK 2
@@ -1197,6 +1175,54 @@ async function runGeneralCommand(
   jid
 ) {
   const prefix = getPrefix();
+
+  if (lower === "menu") {
+    const now = new Date();
+    const time = now.toLocaleTimeString("en-GB");
+    const date = now.toLocaleDateString("en-GB");
+    const sections = [
+      ["☠️", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙲𝙾𝚁𝙴", ["menu","ping","alive","botinfo","status","runtime","profile","help","about","owner","repo"]],
+      ["⚔️", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙱𝙰𝚃𝚃𝙻𝙴", ["fight","duel","battle","challenge","attack","defend","heal","weapon","armor","skills","boss","raid","arena","revenge"]],
+      ["🩸", "𝚂𝙾𝚄𝙻 𝚅𝙰𝚄𝙻𝚃", ["balance","wallet","coins","daily","work","crime","hunt","mission","quest","shop","buy","sell","inventory"]],
+      ["🎮", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙰𝚁𝙲𝙰𝙳𝙴", ["dice","guess","rps","trivia","blackjack","slots","roulette","coinflip","hangman","tictactoe","connect4","snake"]],
+      ["🛡️", "𝚁𝙴𝙰𝙿𝙴𝚁 𝚂𝙴𝙲𝚄𝚁𝙸𝚃𝚈", ["antilink","antibadword","antispam","antiflood","anticall","antidelete","antiedit","antibot","antitag","antimention"]],
+      ["📥", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳", ["play","yt","ytmp3","ytmp4","tiktok","ig","facebook","twitter","movie","music","video","download"]],
+      ["🧠", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙸𝙽𝚃𝙴𝙻𝙻𝙸𝙶𝙴𝙽𝙲𝙴", ["ai","chat","ask","explain","rewrite","summarize","translate"]],
+      ["👥", "𝙶𝚁𝙾𝚄𝙿 𝙲𝙾𝙽𝚃𝚁𝙾𝙻", ["groupinfo","admins","members","tagall","hidetag","promote","demote","kick","add","warn","mute","unmute","welcome","goodbye","hijack","unhijack"]],
+      ["👑", "𝙲𝙾𝙽𝚃𝚁𝙾𝙻 𝙲𝙾𝚁𝙴", ["mode","setprefix","broadcast","block","unblock","sudo","restart","shutdown","reload"]]
+    ];
+    const blocks = sections.map(([icon, name, commands]) => [
+      `*┏━❐〔 ${icon} *${name}* 〕━┈❐`,
+      ...commands.map(command => `*┃➺│ ${prefix}${command}*`),
+      `*┗━━━━━━━━━━━━━━━━┈❐*`
+    ].join("\n"));
+    const text = [
+      reaperHeader(),
+      "",
+      `*╔═━━━━━━━━━━━━━━━━━❐*`,
+      `*┃𖤍 *𝙾𝚆𝙽𝙴𝚁:* 𝚁𝙴𝙰𝙿𝙴𝚁 𝙲𝙾𝚁𝙴 ☠️*`,
+      `*┃𖤍 *𝚅𝙴𝚁𝚂𝙸𝙾𝙽:* ${VERSION}*`,
+      `*┃𖤍 *𝚄𝚂𝙴𝚁:* @${String(sender || "").split("@")[0]}*`,
+      `*┃𖤍 *𝚃𝙸𝙼𝙴:* ${time}*`,
+      `*┃𖤍 *𝚄𝙿𝚃𝙸𝙼𝙴:* ${formatUptime(process.uptime())}*`,
+      `*┃𖤍 *𝚃𝙾𝚃𝙰𝙻 𝙲𝙼𝙳:* ${ALL_COMMANDS.size}+*`,
+      `*┃𖤍 *𝙼𝙾𝙳𝙴:* ${getModeDisplay()}*`,
+      `*┃𖤍 *𝙿𝚁𝙴𝙵𝙸𝚇:* ${prefix}*`,
+      `*┃𖤍 *𝙳𝙰𝚃𝙴:* ${date}*`,
+      `*╚═━━━━━━━━━━━━━━━━━❐*`,
+      "",
+      ...blocks,
+      "",
+      `*╭━━━━━━━𖤍━━━━━━━╮*`,
+      `*┃ 𝚆𝙴 𝙰𝚁𝙴 𝙽𝙾𝚃 𝙷𝙴𝚁𝙴 𝚃𝙾 𝙵𝙾𝙻𝙻𝙾𝚆.*`,
+      `*┃ 𝚆𝙴 𝙰𝚁𝙴 𝙷𝙴𝚁𝙴 𝚃𝙾 𝙻𝙴𝙰𝚅𝙴 𝙰 𝙼𝙰𝚁𝙺. ☠️*`,
+      `*╰━━━━━━━𖤍━━━━━━━╯*`,
+      "",
+      `*⚙️ 𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁*`
+    ].join("\n");
+    await reply(sock, jid, text, msg);
+    return true;
+  }
 
   if (
     lower === "reaper" ||
@@ -1222,24 +1248,24 @@ async function runGeneralCommand(
 
   if (lower === "ping") {
     const started = Date.now();
-
+    const latency = Date.now() - started;
     await reply(
       sock,
       jid,
-      "🦇 *REAPER PING*\n\n⚡ Measuring response...",
+      [
+        reaperHeader(),
+        "",
+        `*╔═━━━━━━━━━━━━━━━━━❐*`,
+        `*┃𖤍 *𝚂𝚈𝚂𝚃𝙴𝙼:* 𝙾𝙽𝙻𝙸𝙽𝙴 ☠️*`,
+        `*┃𖤍 *𝙿𝙸𝙽𝙶:* ${latency} 𝙼𝚂*`,
+        `*┃𖤍 *𝚄𝙿𝚃𝙸𝙼𝙴:* ${formatUptime(process.uptime())}*`,
+        `*┃𖤍 *𝚅𝙴𝚁𝚂𝙸𝙾𝙽:* ${VERSION}*`,
+        `*╚═━━━━━━━━━━━━━━━━━❐*`,
+        "",
+        `*☠️ 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁 𝙼𝙳 𝙸𝚂 𝙰𝙻𝙸𝚅𝙴.*`
+      ].join("\n"),
       msg
     );
-
-    const latency =
-      Date.now() - started;
-
-    await reply(
-      sock,
-      jid,
-      `🦇 *PONG*\n\n⚡ Response: ${latency} ms\n☠️ Status: ONLINE`,
-      msg
-    );
-
     return true;
   }
 
@@ -2501,34 +2527,7 @@ function isBotGroupAdmin(metadata, sock) {
   );
 }
 
-async function requireBotAdmin(sock, jid, msg) {
-  const metadata = await getGroupInfo(sock, jid);
 
-  if (!metadata) {
-    await reply(
-      sock,
-      jid,
-      reaperError("GROUP ONLY", "Group information could not be loaded."),
-      msg
-    );
-    return null;
-  }
-
-  if (!isBotGroupAdmin(metadata, sock)) {
-    await reply(
-      sock,
-      jid,
-      reaperError(
-        "BOT ADMIN",
-        "THE REAPER must be a group administrator for this action."
-      ),
-      msg
-    );
-    return null;
-  }
-
-  return metadata;
-}
 
 function parseMentionTargets(metadata, args, sender) {
   const result = [];
@@ -2611,30 +2610,7 @@ async function runGroupCommand(
 
   const group = ensureGroupSettings(jid);
   const prefix = getPrefix();
-  if (lower === "menu") {
-    const sections = Object.entries(COMMANDS)
-      .map(([category, commands]) =>
-        `┃ *${category}*
-┃ ${commands.map(command => `${prefix}${command}`).join(" • ")}`
-      )
-      .join("\n\n");
 
-    await reply(
-      sock,
-      jid,
-      reaperBox(
-        "☠️ THE REAPER MENU",
-        `┃ ⚡ Version: ${VERSION}
-┃ 📚 Commands: ${ALL_COMMANDS.size}
-┃ ⌨️ Prefix: ${prefix}
-
-${sections}`
-      ),
-      msg
-    );
-
-    return true;
-           }
   // ----------------------------------------------------------
   // INFORMATION
   // ----------------------------------------------------------
@@ -3753,6 +3729,31 @@ ${sections}`
     return true;
   }
 
+  if (lower === "unhijack") {
+    if (!participantIsAdmin(metadata, sender)) {
+      await reply(sock, jid, reaperError("ADMIN ONLY", "Group administrator permission is required."), msg);
+      return true;
+    }
+    if (!(await requireBotAdmin(sock, jid, msg))) return true;
+    try {
+      if (group.originalName) {
+        await sock.groupUpdateSubject(jid, group.originalName);
+      }
+      if (group.originalDescription !== null && group.originalDescription !== undefined) {
+        await sock.groupUpdateDescription(jid, group.originalDescription);
+      }
+      await sock.groupSettingUpdate(jid, "not_announcement");
+      group.hijacked = false;
+      group.originalName = null;
+      group.originalDescription = null;
+      saveSettings();
+      await reply(sock, jid, reaperSuccess("REAPER CONTROL RELEASED", "The original group state has been restored where WhatsApp permissions allowed it."), msg);
+    } catch (err) {
+      await reply(sock, jid, reaperError("UNHIJACK FAILED", err?.message || "WhatsApp rejected one of the restore operations."), msg);
+    }
+    return true;
+  }
+
   return false;
 }
 
@@ -4413,27 +4414,7 @@ async function runAICommand(
 // MEDIA UTILITIES
 // ============================================================
 
-async function getQuotedMediaMessage(msg) {
-  const context =
-    msg.message?.extendedTextMessage?.contextInfo;
 
-  if (!context?.quotedMessage) {
-    return null;
-  }
-
-  return {
-    key: {
-      remoteJid:
-        msg.key.remoteJid,
-      id:
-        context.stanzaId,
-      participant:
-        context.participant
-    },
-    message:
-      context.quotedMessage
-  };
-}
 
 function getMediaType(msg) {
   const message =
@@ -4675,7 +4656,7 @@ async function runMediaCommand(
     }
 
     const quoted =
-      await getQuotedMediaMessage(msg);
+      await getQuotedMessage(msg);
 
     const source =
       quoted || msg;
@@ -4749,7 +4730,7 @@ async function runMediaCommand(
 
   if (lower === "toaudio") {
     const quoted =
-      await getQuotedMediaMessage(msg);
+      await getQuotedMessage(msg);
 
     const source =
       quoted || msg;
@@ -4787,7 +4768,7 @@ async function runMediaCommand(
 
   if (lower === "viewonce") {
     const quoted =
-      await getQuotedMediaMessage(msg);
+      await getQuotedMessage(msg);
 
     if (!quoted) {
       await reply(
@@ -4897,7 +4878,7 @@ async function runMediaCommand(
 
   if (lower === "sticker") {
     const quoted =
-      await getQuotedMediaMessage(msg);
+      await getQuotedMessage(msg);
 
     const source =
       quoted || msg;
@@ -4967,7 +4948,7 @@ async function runMediaCommand(
 
   if (lower === "upload") {
     const quoted =
-      await getQuotedMediaMessage(msg);
+      await getQuotedMessage(msg);
 
     const source =
       quoted || msg;
@@ -5700,6 +5681,7 @@ async function runStoryCommand(
 // REQUIRED RUNTIME HELPERS
 // ------------------------------------------------------------
 
+
 async function downloadMediaMessage(...args) {
   const baileys =
     await import("@whiskeysockets/baileys");
@@ -5785,47 +5767,15 @@ if (!settings.commandCooldown) {
   settings.commandCooldown = 2000;
 }
 
-function getBotMode() {
-  return settings.mode === "private"
-    ? "private"
-    : "public";
-}
 
-function isPrivateMode() {
-  return getBotMode() === "private";
-}
 
-function getModeDisplay() {
-  return isPrivateMode()
-    ? "🔒 PRIVATE"
-    : "🌍 PUBLIC";
-}
 
-function canUseBot(jid) {
-  if (!isPrivateMode()) {
-    return true;
-  }
 
-  return isOwner(jid);
-}
 
-function setBotMode(mode) {
-  const value =
-    String(mode || "")
-      .toLowerCase();
 
-  if (
-    value !== "public" &&
-    value !== "private"
-  ) {
-    return false;
-  }
 
-  settings.mode = value;
-  saveSettings();
 
-  return true;
-}
+
 
 
 // ------------------------------------------------------------
@@ -6774,7 +6724,8 @@ async function runCommand(
       "invite",
       "revoke",
       "gcstatus",
-      "hijack"
+      "hijack",
+    "unhijack"
     ]);
 
   if (
@@ -7259,21 +7210,20 @@ async function startBot() {
     );
 
   const { version } =
-  await fetchLatestWaWebVersion();
+    await fetchLatestWaWebVersion();
 
-console.log(
-  "Using WhatsApp Web version:",
-  version.join(".")
-);
-
-const sock =
-  makeWASocket({
-    version,
-    auth: state,
-    logger:
-      P({ level: "silent" }),
-    printQRInTerminal: false
-  });
+  const sock =
+    makeWASocket({
+      auth: state,
+      logger:
+        P({
+          level: "silent"
+        }),
+      printQRInTerminal: false,
+      ...(version
+        ? { version }
+        : {})
+    });
 
   sock.ev.on(
     "creds.update",

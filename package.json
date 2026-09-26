@@ -1,14 +1,10 @@
 {
-  "name": "the-reaper",
-  "version": "1.0.0",
+  "name": "the-reaper-md",
+  "version": "4.0.0",
   "type": "module",
-  "description": "The Reaper - WhatsApp Bot",
+  "description": "THE REAPER MD — WhatsApp Bot",
   "main": "index.js",
-  "scripts": {
-    "start": "node index.js",
-    "stop": "echo \"Use Railway to stop the service\"",
-    "restart": "echo \"Use Railway to restart the service\""
-  },
+  "scripts": { "start": "node index.js" },
   "dependencies": {
     "@whiskeysockets/baileys": "6.7.23",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
