@@ -1175,6 +1175,9 @@ const COMMANDS = {
     "gcstatus"
   ]
 };
+const ALL_COMMANDS = new Set(
+  Object.values(COMMANDS).flat()
+);
 
 /* =========================================================
    COMMAND ENGINE — BLOCK 2
