@@ -7232,13 +7232,22 @@ async function startBot() {
       "auth"
     );
 
-  const sock =
-    makeWASocket({
-      auth: state,
-      logger:
-        P({ level: "silent" }),
-      printQRInTerminal: false
-    });
+  const { version } =
+  await fetchLatestWaWebVersion();
+
+console.log(
+  "Using WhatsApp Web version:",
+  version.join(".")
+);
+
+const sock =
+  makeWASocket({
+    version,
+    auth: state,
+    logger:
+      P({ level: "silent" }),
+    printQRInTerminal: false
+  });
 
   sock.ev.on(
     "creds.update",
