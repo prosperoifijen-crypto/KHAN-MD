@@ -1232,7 +1232,7 @@ async function runGeneralCommand(
   await reply(sock, jid, text, msg);
 }
 return true;
-)
+
   if (
     lower === "reaper" ||
     lower === "alive" ||
