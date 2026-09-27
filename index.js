@@ -1220,10 +1220,19 @@ async function runGeneralCommand(
       "",
       `*⚙️ 𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁*`
     ].join("\n");
-    await reply(sock, jid, text, msg);
-    return true;
-  }
-
+    if (settings.menuImage && fs.existsSync(BANNER_FILE)) {
+  await sendImage(
+    sock,
+    jid,
+    fs.readFileSync(BANNER_FILE),
+    text,
+    msg
+  );
+} else {
+  await reply(sock, jid, text, msg);
+}
+return true;
+)
   if (
     lower === "reaper" ||
     lower === "alive" ||
