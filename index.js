@@ -34,7 +34,7 @@ const DATA_FILE = path.join(DATA_DIR, "users.json");
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 const BANNER_FILE = path.join(
   ASSET_DIR,
-  "The Reaper Command Menu.png"
+  "THE_REAPER_MD_BOT_BANNER.png"
 );
 
 for (const dir of [
