@@ -8,3 +8,23 @@ assets/*.png
 .env
 
 !assets/THE_REAPER_MD_BOT_BANNER.png
+
+# Runtime WhatsApp sessions
+sessions/
+
+# Logs
+*.log
+pairing.log
+
+# Temporary/runtime files
+08012345678
+2348012345678
+enemyPower
+
+# Backup files
+*.before-*
+*integration-backup*
+
+# Backup files
+*.backup
+*.backup2

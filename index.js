@@ -12,7 +12,40 @@ import crypto from "crypto";
 import ytDlp from "yt-dlp-exec";
 import QRCode from "qrcode";
 import googleTTS from "google-tts-api";
+import * as Aurelian from "./services/index.js";
+import { reconnectSavedSessions } from "./services/session-manager.js";
 import { fileURLToPath } from "url";
+import {
+  getAurelianCard,
+  buildMenu,
+  getCommandCount,
+  getAlive,
+  getBotInfo,
+  getRuntime,
+  getStatus,
+  getUptime,
+  getGroup,
+  buildGroupInfo,
+  buildWelcomeMessage,
+  buildGoodbyeMessage,
+  getProtectionStatus,
+  getAutomationStatus,
+  getBalance,
+  rps,
+  dice,
+  coinflip,
+  slots,
+  joke,
+  quote,
+  fact,
+  truth,
+  dare,
+  compliment,
+  eightBall,
+  askAI,
+  getNews,
+  getWeather
+} from "./services/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1155,7 +1188,29 @@ const COMMANDS = {
   ]
 };
 
-const ALL_COMMANDS = new Set(Object.values(COMMANDS).flat());
+const ALL_COMMANDS = new Set([
+  ...Object.values(COMMANDS).flat(),
+
+  // AURELIAN SERVICE COMMANDS
+  "menu","help","ping","alive","owner","profile","card","runtime","uptime","status","devices","sessions",
+  "lore","awakening","power","realm","reign","oracle","immortal","origin","legend","primordial",
+  "darkness","shadow","curse","doom","void","soul","fear","death","abyss",
+  "ai","ask","chat","translate","summarize","imagine","rewrite","explain","code","chatbot",
+  "add","kick","promote","demote","tagall","hidetag","groupinfo","link","revoke","setname","setdesc",
+  "welcome","goodbye","mute","unmute","join","hijack","gcstatus","gclist",
+  "yt","yta","ytv","tiktok","instagram","facebook","twitter","mediafire","apk","play",
+  "sticker","toimg","tomp3","tomp4","gif","take","resize","blur","tts","qr",
+  "meme","joke","quote","fact","ship","rate","truth","dare","roast","compliment","8ball",
+  "rps","dice","coinflip","guess","trivia","quiz","battle","hunt","duel","adventure","rank","slots","casino",
+  "balance","daily","weekly","work","crime","rob","deposit","withdraw","shop","inventory","sell","leaderboard",
+  "antihijack","antipromote","antidemote","antilink","antispam","antibot","antitag","antiraid",
+  "autoread","autotyping","autorecording","autoview","autostatus","autobio","autolike",
+  "prefix","mode","setbio","setname","setstatus","setmenu","timezone",
+  "broadcast","bcgroup","eval","exec","restart","shutdown","update","setpp","block","unblock",
+  "news","headlines","technews","sportsnews",
+  "bug","report","request","suggest",
+  "weather","time","calc","short","github","google","wikipedia"
+]);
 
 /* =========================================================
    COMMAND ENGINE — BLOCK 2
@@ -6622,6 +6677,749 @@ async function runCommand(
   const jid =
     msg.key.remoteJid;
 
+  // ==========================================================
+  // AURELIAN SERVICE DISPATCHER
+  // ==========================================================
+
+  const aurelianHandled = await (async () => {
+    const name =
+      user?.name ||
+      msg?.pushName ||
+      sender?.split("@")[0] ||
+      "User";
+
+    try {
+      // ---------------- BOT INFO ----------------
+
+      if (lower === "menu" || lower === "help" || lower === "commands") {
+        const text = Aurelian.buildMenu();
+        const media = Aurelian.getMenuMedia();
+
+        if (media?.path && fs.existsSync(media.path)) {
+          await sock.sendMessage(
+            jid,
+            {
+              image: fs.readFileSync(media.path),
+              caption: text
+            },
+            { quoted: msg }
+          );
+        } else {
+          await reply(sock, jid, text, msg);
+        }
+
+        return true;
+      }
+
+      if (lower === "card" || lower === "profile") {
+        await reply(sock, jid, Aurelian.getAurelianCard(), msg);
+        return true;
+      }
+
+      if (lower === "ping") {
+        const start = Aurelian.getPingStart();
+        await reply(sock, jid, Aurelian.getPing(start), msg);
+        return true;
+      }
+
+      if (lower === "alive") {
+        await reply(sock, jid, Aurelian.getAlive(), msg);
+        return true;
+      }
+
+      if (lower === "status") {
+        await reply(sock, jid, Aurelian.getStatus(), msg);
+        return true;
+      }
+
+      if (lower === "runtime" || lower === "uptime") {
+        await reply(sock, jid, Aurelian.getRuntime(), msg);
+        return true;
+      }
+
+      if (lower === "botinfo" || lower === "info") {
+        await reply(sock, jid, Aurelian.getBotInfo(), msg);
+        return true;
+      }
+
+      // ---------------- PRIMORDIAL ----------------
+
+      const primordial = {
+        lore:
+          "Born before kingdoms, gods, and mortal legends, Aurelian awakened from the first light before creation had a name.",
+
+        awakening:
+          "The ancient presence stirs. AURELIAN HAS AWAKENED.",
+
+        power:
+          "Primordial Authority • Celestial Energy • Shadow Manipulation • Eternal Regeneration • Reality Distortion • Divine Perception • Soul Dominion • Immortal Awakening • Celestial Blade • First Light.",
+
+        realm:
+          "A realm between creation and destruction. The throne remembers its first lord.",
+
+        reign:
+          "The throne does not need a king. The throne already remembers Aurelian.",
+
+        oracle:
+          "Ask the ancient realm. Its answers are not always meant for mortals.",
+
+        immortal:
+          "Time does not command Aurelian. Ages pass. The First remains.",
+
+        origin:
+          "Before gods. Before kingdoms. Before legends. There was the First Light.",
+
+        legend:
+          "Aurelian existed before the legends.",
+
+        primordial:
+          "Ancient. Eternal. Divine. The First."
+      };
+
+      if (primordial[lower]) {
+        await reply(
+          sock,
+          jid,
+          `> ╭━━━〔 𖣔 AURELIAN • ${lower.toUpperCase()} 𖣔 〕━━━╮
+> ┃𖣔│𓁹 ${primordial[lower]}
+> ╰━━━━━━━━━━━━━━━━━━━━╯
+> ☠️ AURELIAN • THE PRIMORDIAL LORD`,
+          msg
+        );
+
+        return true;
+      }
+
+      // ---------------- DARKNESS ----------------
+
+      const darkness = {
+        darkness: "The darkness does not fear Aurelian. It answers him.",
+        shadow: "Every shadow remembers the First.",
+        curse: "A curse is merely a command waiting to be spoken.",
+        doom: "Doom arrives when the Primordial Lord permits it.",
+        void: "Beyond the void lies the silence before creation.",
+        soul: "Every soul carries a trace of the First Light.",
+        fear: "Fear belongs to those who have not faced eternity.",
+        death: "Death is not Aurelian's master.",
+        abyss: "The abyss looks back when Aurelian enters."
+      };
+
+      if (darkness[lower]) {
+        await reply(
+          sock,
+          jid,
+          `> ╭━━━〔 𖣔 DARKNESS 𖣔 〕━━━╮
+> ┃𖣔│𓁹 ${darkness[lower]}
+> ╰━━━━━━━━━━━━━━━━━━━━╯
+> ☠️ AURELIAN • THE PRIMORDIAL LORD`,
+          msg
+        );
+
+        return true;
+      }
+
+      // ---------------- ECONOMY ----------------
+
+      if (lower === "balance") {
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(Aurelian.getBalance(sender, name), null, 2),
+          msg
+        );
+        return true;
+      }
+
+      if (lower === "daily") {
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(Aurelian.claimDaily(sender, name), null, 2),
+          msg
+        );
+        return true;
+      }
+
+      if (lower === "weekly") {
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(Aurelian.claimWeekly(sender, name), null, 2),
+          msg
+        );
+        return true;
+      }
+
+      if (lower === "work") {
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(Aurelian.work(sender, name), null, 2),
+          msg
+        );
+        return true;
+      }
+
+      // ---------------- GAMES ----------------
+
+      if (lower === "rps") {
+        const choice = String(args[0] || "").toLowerCase();
+
+        if (!["rock", "paper", "scissors"].includes(choice)) {
+          await reply(sock, jid, "Usage: rps <rock|paper|scissors>", msg);
+          return true;
+        }
+
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(Aurelian.rps(sender, choice, name), null, 2),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "dice") {
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(Aurelian.dice(sender, name), null, 2),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "coinflip") {
+        const choice = String(args[0] || "").toLowerCase();
+
+        if (!["heads", "tails"].includes(choice)) {
+          await reply(sock, jid, "Usage: coinflip <heads|tails>", msg);
+          return true;
+        }
+
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(Aurelian.coinflip(sender, choice, name), null, 2),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "slots") {
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(Aurelian.slots(sender, name), null, 2),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "battle" || lower === "duel") {
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(
+            Aurelian.battle(
+              sender,
+              args.join(" ") || "Aurelian",
+              name
+            ),
+            null,
+            2
+          ),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "rank") {
+        await reply(
+          sock,
+          jid,
+          JSON.stringify(Aurelian.getRank(sender, name), null, 2),
+          msg
+        );
+
+        return true;
+      }
+
+      // ---------------- FUN ----------------
+
+      if (["joke", "quote", "fact", "meme"].includes(lower)) {
+        const fn = {
+          joke: Aurelian.joke,
+          quote: Aurelian.quote,
+          fact: Aurelian.fact,
+          meme: Aurelian.meme
+        }[lower];
+
+        await reply(sock, jid, fn(), msg);
+        return true;
+      }
+
+      if (lower === "truth" || lower === "dare") {
+        await reply(
+          sock,
+          jid,
+          lower === "truth"
+            ? Aurelian.truth()
+            : Aurelian.dare(),
+          msg
+        );
+
+        return true;
+      }
+
+      if (["roast", "compliment", "rate"].includes(lower)) {
+        const target = args.join(" ") || name;
+
+        const fn = {
+          roast: Aurelian.roast,
+          compliment: Aurelian.compliment,
+          rate: Aurelian.rate
+        }[lower];
+
+        await reply(sock, jid, fn(target), msg);
+        return true;
+      }
+
+      if (lower === "ship") {
+        await reply(
+          sock,
+          jid,
+          Aurelian.ship(
+            name,
+            args.join(" ") || "Aurelian"
+          ),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "8ball") {
+        await reply(
+          sock,
+          jid,
+          Aurelian.eightBall(args.join(" ")),
+          msg
+        );
+
+        return true;
+      }
+
+      // ---------------- AI ----------------
+
+      if (["ai", "ask", "chat"].includes(lower)) {
+        const prompt = args.join(" ").trim();
+
+        if (!prompt) {
+          await reply(sock, jid, "Usage: ai <question>", msg);
+          return true;
+        }
+
+        await reply(
+          sock,
+          jid,
+          await Aurelian.askAI(prompt),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "summarize") {
+        const text = args.join(" ").trim();
+
+        if (!text) {
+          await reply(sock, jid, "Usage: summarize <text>", msg);
+          return true;
+        }
+
+        await reply(
+          sock,
+          jid,
+          await Aurelian.summarizeText(text),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "explain") {
+        const text = args.join(" ").trim();
+
+        if (!text) {
+          await reply(sock, jid, "Usage: explain <text>", msg);
+          return true;
+        }
+
+        await reply(
+          sock,
+          jid,
+          await Aurelian.explainText(text),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "rewrite") {
+        const text = args.join(" ").trim();
+
+        if (!text) {
+          await reply(sock, jid, "Usage: rewrite <text>", msg);
+          return true;
+        }
+
+        await reply(
+          sock,
+          jid,
+          await Aurelian.rewriteText(text),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "code") {
+        const text = args.join(" ").trim();
+
+        if (!text) {
+          await reply(sock, jid, "Usage: code <request>", msg);
+          return true;
+        }
+
+        await reply(
+          sock,
+          jid,
+          await Aurelian.generateCode(text),
+          msg
+        );
+
+        return true;
+      }
+
+      // ---------------- WEATHER / SEARCH ----------------
+
+      if (lower === "weather") {
+        const location = args.join(" ").trim();
+
+        if (!location) {
+          await reply(sock, jid, "Usage: weather <city>", msg);
+          return true;
+        }
+
+        const result = await Aurelian.getWeather(location);
+
+        await reply(
+          sock,
+          jid,
+          Aurelian.buildWeatherResult(result),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "google") {
+        const query = args.join(" ").trim();
+
+        if (!query) {
+          await reply(sock, jid, "Usage: google <query>", msg);
+          return true;
+        }
+
+        const result = await Aurelian.googleSearch(query);
+
+        await reply(
+          sock,
+          jid,
+          Aurelian.buildGoogleResult(result),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "wikipedia" || lower === "wiki") {
+        const query = args.join(" ").trim();
+
+        if (!query) {
+          await reply(sock, jid, "Usage: wikipedia <query>", msg);
+          return true;
+        }
+
+        const result = await Aurelian.wikipediaSearch(query);
+
+        await reply(
+          sock,
+          jid,
+          Aurelian.buildWikipediaResult(result),
+          msg
+        );
+
+        return true;
+      }
+
+      // ---------------- NEWS ----------------
+
+      if (lower === "news") {
+        const result = await Aurelian.getNews(
+          args.join(" ").trim()
+        );
+
+        await reply(
+          sock,
+          jid,
+          Aurelian.buildNewsResult(result),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "headlines") {
+        const result = await Aurelian.getHeadlines();
+
+        await reply(
+          sock,
+          jid,
+          Aurelian.buildNewsResult(result),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "technews") {
+        const result = await Aurelian.getTechNews();
+
+        await reply(
+          sock,
+          jid,
+          Aurelian.buildNewsResult(result),
+          msg
+        );
+
+        return true;
+      }
+
+      if (lower === "sportsnews") {
+        const result = await Aurelian.getSportsNews();
+
+        await reply(
+          sock,
+          jid,
+          Aurelian.buildNewsResult(result),
+          msg
+        );
+
+        return true;
+      }
+
+      // ---------------- GROUP SERVICES ----------------
+
+      if (isGroup) {
+        const group = Aurelian.getGroup(jid);
+
+        if (lower === "groupinfo") {
+          let metadata = null;
+
+          try {
+            metadata = await sock.groupMetadata(jid);
+          } catch {}
+
+          const participants =
+            metadata?.participants || [];
+
+          const admins = participants.filter(
+            p =>
+              p.admin === "admin" ||
+              p.admin === "superadmin"
+          );
+
+          await reply(
+            sock,
+            jid,
+            Aurelian.buildGroupInfo({
+              groupId: jid,
+              name: metadata?.subject || group.name,
+              description:
+                metadata?.desc ||
+                group.description,
+              owner:
+                metadata?.owner ||
+                "Unknown",
+              memberCount:
+                participants.length,
+              admins:
+                admins.length
+            }),
+            msg
+          );
+
+          return true;
+        }
+
+        if (
+          lower === "tagall" ||
+          lower === "hidetag"
+        ) {
+          let metadata;
+
+          try {
+            metadata =
+              await sock.groupMetadata(jid);
+          } catch {
+            await reply(
+              sock,
+              jid,
+              "Unable to read group members.",
+              msg
+            );
+
+            return true;
+          }
+
+          const participants =
+            metadata.participants || [];
+
+          const result =
+            lower === "tagall"
+              ? Aurelian.buildTagAll(
+                  participants,
+                  args.join(" ") ||
+                    "The Primordial Lord summons the realm."
+                )
+              : Aurelian.buildHideTag(
+                  participants,
+                  args.join(" ") ||
+                    "The shadows have summoned the realm."
+                );
+
+          await sock.sendMessage(
+            jid,
+            {
+              text: result.text,
+              mentions: result.mentions
+            },
+            { quoted: msg }
+          );
+
+          return true;
+        }
+
+        if (
+          lower === "welcome" ||
+          lower === "goodbye"
+        ) {
+          const enabled =
+            !args[0] ||
+            ["on", "enable", "enabled"].includes(
+              String(args[0]).toLowerCase()
+            );
+
+          if (lower === "welcome") {
+            Aurelian.setWelcome(
+              jid,
+              enabled
+            );
+          } else {
+            Aurelian.setGoodbye(
+              jid,
+              enabled
+            );
+          }
+
+          await reply(
+            sock,
+            jid,
+            Aurelian.getWelcomeStatus(jid),
+            msg
+          );
+
+          return true;
+        }
+
+        if (lower === "gcstatus") {
+          await reply(
+            sock,
+            jid,
+            Aurelian.getWelcomeStatus(jid),
+            msg
+          );
+
+          return true;
+        }
+
+        const protectionCommands = [
+          "antilink",
+          "antispam",
+          "antibot",
+          "antitag",
+          "antiraid",
+          "antihijack",
+          "antipromote",
+          "antidemote"
+        ];
+
+        if (protectionCommands.includes(lower)) {
+          const enabled =
+            !args[0] ||
+            ["on", "enable", "enabled"].includes(
+              String(args[0]).toLowerCase()
+            );
+
+          Aurelian.setProtection(
+            jid,
+            lower,
+            enabled
+          );
+
+          await reply(
+            sock,
+            jid,
+            Aurelian.getProtectionStatus(jid),
+            msg
+          );
+
+          return true;
+        }
+      }
+
+      return false;
+
+    } catch (error) {
+      console.error(
+        "AURELIAN COMMAND ERROR:",
+        lower,
+        error
+      );
+
+      await reply(
+        sock,
+        jid,
+        `> ╭━━━〔 𖣔 𝗔𝗨𝗥𝗘𝗟𝗜𝗔𝗡 𝗘𝗥𝗥𝗢𝗥 𖣔 〕━━━╮
+> ┃𖣔│𓁹 Command: ${lower}
+> ┃𖣔│𓁹 ${error?.message || "Unknown error"}
+> ╰━━━━━━━━━━━━━━━━━━━━╯`,
+        msg
+      );
+
+      return true;
+    }
+  })();
+
+  if (aurelianHandled) return;
+
   // ----------------------------------------------------------
   // PRIVATE MODE
   // ----------------------------------------------------------
@@ -7210,12 +8008,42 @@ async function handleAutomaticAI(
 // ============================================================
 
 async function startBot() {
+  await reconnectSavedSessions();
+  // Use an existing connected multi-session when available.
+  // Fall back to the normal auth directory for fresh pairing.
+  const forceFreshPairing =
+    process.env.FORCE_FRESH_PAIRING === "1";
+
+  const savedSessions =
+    Aurelian.getSessions();
+
+  const activeSession =
+    forceFreshPairing
+      ? null
+      : Object.values(savedSessions || {}).find(
+          session =>
+            session &&
+            session.status === "connected" &&
+            session.socketActive === true &&
+            session.path &&
+            fs.existsSync(session.path)
+        );
+
+  const authPath =
+    activeSession?.path || "auth";
+
+  console.log(
+    activeSession
+      ? `Restoring saved session: ${activeSession.id}`
+      : "No saved connected session found — using auth directory."
+  );
+
   const {
     state,
     saveCreds
   } =
     await useMultiFileAuthState(
-      "auth"
+      authPath
     );
 
   const { version } =
@@ -7262,7 +8090,7 @@ async function startBot() {
 
         if (!phone) {
           console.log(
-            "PHONE_NUMBER is missing in Railway Variables."
+            "PHONE_NUMBER not set — waiting for existing/local pairing."
           );
           return;
         }
@@ -7342,9 +8170,16 @@ async function startBot() {
         );
 
         if (
-          statusCode !==
-          DisconnectReason.loggedOut
+          statusCode === 401 ||
+          statusCode === DisconnectReason.loggedOut
         ) {
+          console.log(
+            "Saved WhatsApp session is no longer valid."
+          );
+          console.log(
+            "The session was NOT deleted. Fresh pairing can be started manually."
+          );
+        } else {
           setTimeout(
             () => {
               startBot().catch(
@@ -7356,10 +8191,6 @@ async function startBot() {
               );
             },
             3000
-          );
-        } else {
-          console.log(
-            "Logged out. Remove the auth session only if you intentionally want to pair again."
           );
         }
       }
@@ -7709,10 +8540,28 @@ process.on(
 startBot().catch(
   err => {
     console.error(
-      "Failed to start THE REAPER:",
+      "Failed to start AURELIAN:",
       err
     );
 
     process.exit(1);
   }
 );
+// ============================================================
+// TELEGRAM MULTI-WHATSAPP GATEWAY
+// ============================================================
+
+if (process.env.TELEGRAM_BOT_TOKEN) {
+  Aurelian.startTelegramBot().catch(
+    err => {
+      console.error(
+        "Failed to start Telegram gateway:",
+        err
+      );
+    }
+  );
+} else {
+  console.log(
+    "Telegram gateway disabled: TELEGRAM_BOT_TOKEN is not set."
+  );
+}

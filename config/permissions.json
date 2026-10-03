@@ -1,0 +1,30 @@
+{
+  "public": {
+    "general": true,
+    "ai": true,
+    "downloads": true,
+    "media": true,
+    "games": true,
+    "fun": true,
+    "economy": true,
+    "group": "admin",
+    "protection": "admin",
+    "automation": "admin",
+    "settings": "owner",
+    "owner": "owner"
+  },
+  "private": {
+    "general": "owner",
+    "ai": "owner",
+    "downloads": "owner",
+    "media": "owner",
+    "games": "owner",
+    "fun": "owner",
+    "economy": "owner",
+    "group": "owner",
+    "protection": "owner",
+    "automation": "owner",
+    "settings": "owner",
+    "owner": "owner"
+  }
+}

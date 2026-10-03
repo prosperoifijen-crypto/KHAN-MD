@@ -1,0 +1,46 @@
+{
+  "ai": {
+    "enabled": true,
+    "provider": "gemini",
+    "apiKeyEnv": "GEMINI_API_KEY"
+  },
+  "news": {
+    "enabled": true,
+    "provider": "newsapi",
+    "apiKeyEnv": "NEWS_API_KEY"
+  },
+  "weather": {
+    "enabled": true,
+    "provider": "openweather",
+    "apiKeyEnv": "OPENWEATHER_API_KEY"
+  },
+  "youtube": {
+    "enabled": true,
+    "provider": "yt-dlp"
+  },
+  "tiktok": {
+    "enabled": true
+  },
+  "instagram": {
+    "enabled": true
+  },
+  "facebook": {
+    "enabled": true
+  },
+  "media": {
+    "enabled": true,
+    "ffmpeg": true
+  },
+  "cobalt": {
+    "enabled": false,
+    "apiUrlEnv": "COBALT_API_URL"
+  },
+  "pairing": {
+    "enabled": true,
+    "multiSession": true
+  },
+  "welcome": {
+    "enabled": true,
+    "audio": true
+  }
+}

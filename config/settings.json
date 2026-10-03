@@ -1,0 +1,25 @@
+{
+  "prefix": "!",
+  "mode": "public",
+  "timezone": "Africa/Lagos",
+  "language": "en",
+  "readMessages": false,
+  "autoTyping": false,
+  "autoRecording": false,
+  "autoViewStatus": false,
+  "autoStatus": false,
+  "autoBio": false,
+  "autoLikeStatus": false,
+  "chatbot": false,
+  "welcomeMessage": true,
+  "welcomeAudio": true,
+  "automation": {
+    "autoread": false,
+    "autotyping": false,
+    "autorecording": false,
+    "autoview": false,
+    "autostatus": false,
+    "autobio": false,
+    "autolike": false
+  }
+}
