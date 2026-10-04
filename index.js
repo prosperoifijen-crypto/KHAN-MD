@@ -8206,10 +8206,38 @@ async function startBot() {
           statusCode === DisconnectReason.loggedOut
         ) {
           console.log(
-            "Saved WhatsApp session is no longer valid."
+            "Saved WhatsApp session is no longer valid — starting fresh pairing."
           );
-          console.log(
-            "The session was NOT deleted. Fresh pairing can be started manually."
+
+          try {
+            if (fs.existsSync(authPath)) {
+              fs.rmSync(authPath, {
+                recursive: true,
+                force: true
+              });
+            }
+
+            fs.mkdirSync(authPath, {
+              recursive: true
+            });
+          } catch (cleanupError) {
+            console.error(
+              "Failed to reset invalid WhatsApp auth:",
+              cleanupError?.message || cleanupError
+            );
+          }
+
+          setTimeout(
+            () => {
+              startBot().catch(
+                err =>
+                  console.error(
+                    "Fresh pairing restart failed:",
+                    err
+                  )
+              );
+            },
+            3000
           );
         } else {
           setTimeout(
