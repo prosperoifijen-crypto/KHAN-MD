@@ -505,7 +505,21 @@ async function handlePhone(
                 buildPairing(
                   phone,
                   code
-                )
+                ),
+                {
+                  reply_markup: {
+                    inline_keyboard: [
+                      [
+                        {
+                          text: "📋 COPY PAIRING CODE",
+                          copy_text: {
+                            text: String(code)
+                          }
+                        }
+                      ]
+                    ]
+                  }
+                }
               );
             } catch (error) {
               console.error(
