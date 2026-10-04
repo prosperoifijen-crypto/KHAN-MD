@@ -8026,7 +8026,7 @@ function bindAurelianSocketEvents(sock, sessionId) {
         return;
       }
 
-      return aurelianMessageHandler(event);
+      return aurelianMessageHandler(sock, event);
     }
   );
 }
@@ -8303,10 +8303,12 @@ async function startBot() {
   // MESSAGES
   // ----------------------------------------------------------
 
-  aurelianMessageHandler = async ({
+  aurelianMessageHandler = async (boundSock, {
     messages,
     type
   }) => {
+      const sock = boundSock;
+
       try {
         if (
           type !== "notify" &&
@@ -8563,7 +8565,7 @@ async function startBot() {
 
   sock.ev.on(
     "messages.upsert",
-    aurelianMessageHandler
+    event => aurelianMessageHandler(sock, event)
   );
 
   return sock;
