@@ -273,11 +273,18 @@ export async function connectSavedSession(sessionId) {
   }
 }
 
-export async function reconnectSavedSessions() {
+export async function reconnectSavedSessions(excludeSessionIds = []) {
   const sessions = listSessions();
+
+  const excluded = new Set(
+    excludeSessionIds.map(id => String(id))
+  );
 
   for (const session of sessions) {
     try {
+      if (excluded.has(String(session?.id))) {
+        continue;
+      }
       if (!session?.id || !session?.path) {
         continue;
       }

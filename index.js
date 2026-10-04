@@ -8040,7 +8040,6 @@ setSocketEventBinder(bindAurelianSocketEvents);
 // ============================================================
 
 async function startBot() {
-  await reconnectSavedSessions();
   // Use an existing connected multi-session when available.
   // Fall back to the normal auth directory for fresh pairing.
   const forceFreshPairing =
@@ -8060,6 +8059,13 @@ async function startBot() {
             session.path &&
             fs.existsSync(session.path)
         );
+
+  // Do not recover the session that startBot() is about to own.
+  await reconnectSavedSessions(
+    activeSession?.id
+      ? [activeSession.id]
+      : []
+  );
 
   const authPath =
     activeSession?.path || AUTH_DIR;
