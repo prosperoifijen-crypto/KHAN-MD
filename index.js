@@ -61,9 +61,14 @@ const BOT_NAME = "THE REAPER MD";
 const OWNER_NAME = "Reaper";
 const VERSION = "4.0.0";
 const DEFAULT_PREFIX = ".";
-const DATA_DIR = path.join(__dirname, "data");
+const PERSISTENT_DIR =
+  process.env.RAILWAY_VOLUME_MOUNT_PATH ||
+  process.env.PERSISTENT_DIR ||
+  path.join(__dirname, "persistent");
+
+const DATA_DIR = path.join(PERSISTENT_DIR, "data");
 const DOWNLOAD_DIR = path.join(__dirname, "downloads");
-const AUTH_DIR = path.join(__dirname, "auth");
+const AUTH_DIR = path.join(PERSISTENT_DIR, "auth");
 const ASSET_DIR = path.join(__dirname, "assets");
 
 const DATA_FILE = path.join(DATA_DIR, "users.json");
@@ -8057,7 +8062,7 @@ async function startBot() {
         );
 
   const authPath =
-    activeSession?.path || "auth";
+    activeSession?.path || AUTH_DIR;
 
   console.log(
     activeSession

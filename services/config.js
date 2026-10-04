@@ -8,29 +8,66 @@ const ROOT = path.join(__dirname, "..");
 
 export const ROOT_DIR = ROOT;
 export const CONFIG_DIR = path.join(ROOT, "config");
-export const DATA_DIR = path.join(ROOT, "data");
+
+export const PERSISTENT_DIR =
+  process.env.RAILWAY_VOLUME_MOUNT_PATH ||
+  process.env.PERSISTENT_DIR ||
+  path.join(ROOT, "persistent");
+
+export const DATA_DIR = path.join(PERSISTENT_DIR, "data");
+export const SESSIONS_DIR = path.join(PERSISTENT_DIR, "sessions");
+export const AUTH_DIR = path.join(PERSISTENT_DIR, "auth");
+
 export const ASSETS_DIR = path.join(ROOT, "assets");
 export const DOWNLOAD_DIR = path.join(ROOT, "downloads");
-export const SESSIONS_DIR = path.join(ROOT, "sessions");
+
+for (const dir of [
+  PERSISTENT_DIR,
+  DATA_DIR,
+  SESSIONS_DIR,
+  AUTH_DIR
+]) {
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+function resolveJSONPath(file) {
+  const clean = String(file || "").replace(/^[/\\]+/, "");
+
+  if (clean.startsWith("data/")) {
+    return path.join(DATA_DIR, clean.slice(5));
+  }
+
+  return path.join(ROOT, clean);
+}
 
 export function loadJSON(file) {
-  const filePath = path.join(ROOT, file);
+  const filePath = resolveJSONPath(file);
 
   if (!fs.existsSync(filePath)) {
     return {};
   }
 
   try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+    return JSON.parse(
+      fs.readFileSync(filePath, "utf8")
+    );
   } catch {
     return {};
   }
 }
 
 export function saveJSON(file, data) {
-  const filePath = path.join(ROOT, file);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  const filePath = resolveJSONPath(file);
+
+  fs.mkdirSync(
+    path.dirname(filePath),
+    { recursive: true }
+  );
+
+  fs.writeFileSync(
+    filePath,
+    JSON.stringify(data, null, 2)
+  );
 }
 
 export const aurelian = loadJSON("config/aurelian.json");
