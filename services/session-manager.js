@@ -22,6 +22,25 @@ import {
 const logger = pino({ level: "info" });
 
 const activeSockets = new Map();
+
+let socketEventBinder = null;
+
+export function setSocketEventBinder(fn) {
+  socketEventBinder = typeof fn === "function" ? fn : null;
+}
+
+function bindSocketEvents(sock, sessionId) {
+  if (typeof socketEventBinder !== "function") return;
+
+  try {
+    socketEventBinder(sock, sessionId);
+  } catch (error) {
+    console.error(
+      `Socket event binder failed for ${sessionId}:`,
+      error?.message || error
+    );
+  }
+}
 const reconnecting = new Set();
 
 const RECONNECT_DELAY = 10000;
@@ -103,6 +122,7 @@ export async function connectSavedSession(sessionId) {
     });
 
     activeSockets.set(sessionId, sock);
+    bindSocketEvents(sock, sessionId);
 
     sock.ev.on(
       "creds.update",
@@ -332,7 +352,8 @@ export default {
   reconnectSavedSessions,
   getActiveSocket,
   getActiveSessionIds,
-  getSessionManagerStatus
+  getSessionManagerStatus,
+  setSocketEventBinder
 };
 
 export async function createPairingSocket(sessionId, phoneNumber, callbacks = {}) {
@@ -380,6 +401,7 @@ export async function createPairingSocket(sessionId, phoneNumber, callbacks = {}
     });
 
     activeSockets.set(sessionId, sock);
+    bindSocketEvents(sock, sessionId);
 
     /*
      * IMPORTANT:

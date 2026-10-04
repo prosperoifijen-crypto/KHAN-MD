@@ -13,7 +13,10 @@ import ytDlp from "yt-dlp-exec";
 import QRCode from "qrcode";
 import googleTTS from "google-tts-api";
 import * as Aurelian from "./services/index.js";
-import { reconnectSavedSessions } from "./services/session-manager.js";
+import {
+  reconnectSavedSessions,
+  setSocketEventBinder
+} from "./services/session-manager.js";
 import { fileURLToPath } from "url";
 import {
   getAurelianCard,
@@ -8004,6 +8007,30 @@ async function handleAutomaticAI(
 
 
 // ============================================================
+// ============================================================
+// AURELIAN SOCKET EVENT BRIDGE
+// ============================================================
+
+let aurelianMessageHandler = null;
+
+function bindAurelianSocketEvents(sock, sessionId) {
+  sock.ev.on(
+    "messages.upsert",
+    async event => {
+      if (typeof aurelianMessageHandler !== "function") {
+        return;
+      }
+
+      return aurelianMessageHandler(event);
+    }
+  );
+}
+
+setSocketEventBinder(bindAurelianSocketEvents);
+
+
+// ============================================================
+
 // FINAL BOT STARTUP
 // ============================================================
 
@@ -8243,12 +8270,10 @@ async function startBot() {
   // MESSAGES
   // ----------------------------------------------------------
 
-  sock.ev.on(
-    "messages.upsert",
-    async ({
-      messages,
-      type
-    }) => {
+  aurelianMessageHandler = async ({
+    messages,
+    type
+  }) => {
       try {
         if (
           type !== "notify" &&
@@ -8501,7 +8526,11 @@ async function startBot() {
           }
         } catch {}
       }
-    }
+    };
+
+  sock.ev.on(
+    "messages.upsert",
+    aurelianMessageHandler
   );
 
   return sock;
