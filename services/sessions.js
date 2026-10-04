@@ -57,21 +57,57 @@ export function createSession(sessionId, metadata = {}) {
   return sessions[id];
 }
 
+function normalizeSession(session) {
+  if (!session?.id) return session;
+
+  return {
+    ...session,
+    id: cleanId(session.id),
+    path: getSessionPath(session.id)
+  };
+}
+
+function normalizeStoredSessions(sessions) {
+  let changed = false;
+  const normalized = {};
+
+  for (const [key, value] of Object.entries(sessions || {})) {
+    if (!value?.id) {
+      normalized[key] = value;
+      continue;
+    }
+
+    const session = normalizeSession(value);
+
+    if (value.path !== session.path) {
+      changed = true;
+    }
+
+    normalized[session.id] = session;
+  }
+
+  if (changed) {
+    saveSessions(normalized);
+  }
+
+  return normalized;
+}
+
 export function getSession(sessionId) {
   const id = cleanId(sessionId);
-  const sessions = getSessions();
+  const sessions = normalizeStoredSessions(getSessions());
 
   return sessions[id] || null;
 }
 
 export function listSessions() {
-  const sessions = getSessions();
+  const sessions = normalizeStoredSessions(getSessions());
   return Object.values(sessions);
 }
 
 export function updateSession(sessionId, updates = {}) {
   const id = cleanId(sessionId);
-  const sessions = getSessions();
+  const sessions = normalizeStoredSessions(getSessions());
 
   if (!sessions[id]) {
     throw new Error(`Session "${id}" does not exist.`);
@@ -81,6 +117,7 @@ export function updateSession(sessionId, updates = {}) {
     ...sessions[id],
     ...updates,
     id,
+    path: getSessionPath(id),
     updatedAt: new Date().toISOString()
   };
 
