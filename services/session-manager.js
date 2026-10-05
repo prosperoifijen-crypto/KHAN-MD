@@ -274,6 +274,16 @@ export async function connectSavedSession(sessionId) {
 }
 
 export async function reconnectSavedSessions(excludeSessionIds = []) {
+  // Disable automatic recovery of old multi-user sessions at startup.
+  // This prevents stale/invalid WhatsApp credentials from interfering
+  // with the main Aurelian connection.
+  if (process.env.RECOVER_SAVED_SESSIONS !== "1") {
+    console.log(
+      "⏸️ Saved multi-user session recovery disabled at startup."
+    );
+    return;
+  }
+
   const sessions = listSessions();
 
   const excluded = new Set(
