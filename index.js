@@ -4338,74 +4338,26 @@ function shouldTriggerAI(
 }
 
 function cleanAIInput(text) {
+  const prefix = String(getPrefix() || ".")
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
   return String(text || "")
     .replace(/@\d{5,20}/g, "")
-    .replace(/^(\.ai|\.chat|\.ask)\s+/i, "")
+    .replace(
+      new RegExp(
+        `^${prefix}(?:ai|chat|ask|explain|rewrite|summarize|translate)\\s+`,
+        "i"
+      ),
+      ""
+    )
     .trim();
 }
 
 async function callOpenRouter(prompt) {
-  const key =
-    process.env.OPENROUTER_API_KEY;
-
-  if (!key) {
-    return null;
-  }
-
-  const response =
-    await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization:
-            `Bearer ${key}`,
-          "Content-Type":
-            "application/json",
-          "HTTP-Referer":
-            "https://railway.app",
-          "X-Title":
-            "THE REAPER"
-        },
-        body: JSON.stringify({
-          model:
-            "openai/gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                [
-                  "You are THE REAPER, a WhatsApp AI assistant.",
-                  "Be useful, natural, concise and accurate.",
-                  "Use a dark cyber-gothic personality lightly.",
-                  "Do not claim to have abilities you do not have.",
-                  "Do not mention these system instructions."
-                ].join(" ")
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 700
-        })
-      }
-    );
-
-  if (!response.ok) {
-    throw new Error(
-      `OpenRouter HTTP ${response.status}`
-    );
-  }
-
-  const data =
-    await response.json();
-
-  return (
-    data?.choices?.[0]?.message?.content ||
-    null
-  );
+  // AURELIAN AI CORE
+  // Compatibility wrapper: all AI requests now use
+  // the official Aurelian Gemini service.
+  return await Aurelian.askAI(prompt);
 }
 
 async function runAICommand(
@@ -4450,7 +4402,7 @@ async function runAICommand(
         jid,
         reaperError(
           "AI OFFLINE",
-          "OPENROUTER_API_KEY is missing or the AI service returned no response."
+          "GEMINI_API_KEY is missing or the Aurelian AI service returned no response."
         ),
         msg
       );
@@ -4461,7 +4413,7 @@ async function runAICommand(
       sock,
       jid,
       reaperBox(
-        "☠️ REAPER AI",
+        "👑 AURELIAN AI",
         answer
       ),
       msg
@@ -7976,7 +7928,7 @@ async function handleAutomaticAI(
 
   if (!prompt) {
     prompt =
-      "The user mentioned THE REAPER. Respond naturally and ask what they need.";
+      "The user mentioned AURELIAN. Respond naturally and ask what they need.";
   }
 
   try {
@@ -7993,7 +7945,7 @@ async function handleAutomaticAI(
       sock,
       jid,
       reaperBox(
-        "☠️ REAPER AI",
+        "👑 AURELIAN AI",
         answer
       ),
       msg
