@@ -54,13 +54,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /* =========================================================
-   THE REAPER — FINAL CORE
+   AURELIAN — THE PRIMORDIAL LORD
    ========================================================= */
 
-const BOT_NAME = "THE REAPER MD";
-const OWNER_NAME = "Reaper";
-const VERSION = "4.0.0";
-const DEFAULT_PREFIX = ".";
+const BOT_NAME = "AURELIAN";
+const BOT_TITLE = "THE PRIMORDIAL LORD";
+const OWNER_NAME = "Aurelian";
+const VERSION = "5.0.0";
+const DEFAULT_PREFIX = "!";
 const PERSISTENT_DIR =
   process.env.RAILWAY_VOLUME_MOUNT_PATH ||
   process.env.PERSISTENT_DIR ||
@@ -75,7 +76,7 @@ const DATA_FILE = path.join(DATA_DIR, "users.json");
 const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
 const BANNER_FILE = path.join(
   ASSET_DIR,
-  "THE_REAPER_MD_BOT_BANNER.png"
+  "AURELIAN_BOT_BANNER.png"
 );
 
 for (const dir of [
@@ -273,68 +274,58 @@ function formatDuration(ms) {
 }
 
 /* =========================================================
-   REAPER RESPONSE SYSTEM
+   AURELIAN RESPONSE SYSTEM
    ========================================================= */
 
 function reaperHeader() {
   return [
-    `*╔═━━━━━━━✦ ☠️ ✦━━━━━━━═❐*`,
-    `*┃ 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁 𝙼𝙳*`,
-    `*╚═━━━━━━━✦ ☠️ ✦━━━━━━━═❐*`
-  ].join("\n");
+    "╔═〔 ☬ 𓁹 𝘼𝙐𝙍𝙀𝙇𝙄𝘼𝙉 𓁹 ☬ 〕═╗",
+    "┃☬│𓁹 𝙏𝙃𝙀 𝙋𝙍𝙄𝙈𝙊𝙍𝘿𝙄𝘼𝙇 𝙇𝙊𝙍𝘿",
+    "┃☬│𓁹 𝙏𝙃𝙀 𝙁𝙄𝙍𝙎𝙏 𝙀𝙏𝙀𝙍𝙉𝘼𝙇",
+    "╚═〔 ☬ 𓁹 𝘼𝙐𝙍𝙀𝙇𝙄𝘼𝙉 𓁹 ☬ 〕═╝"
+  ].map(line => `> ${line}`).join("\\n");
 }
 
 function reaperBox(title, body = "") {
   return [
-    reaperHeader(),
-    "",
-    `*┏━❐〔 ${title} 〕━┈❐`,
-    body,
-    `*┗━━━━━━━━━━━━━━━━┈❐*`,
-    "",
-    `*☠️ 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁 𝙼𝙳*`
-  ].join("\n");
+    "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 〕═╗",
+    `┃☬│𓁹 ${title}`,
+    ...String(body || "").split("\\n").map(line => `┃☬│𓁹 ${line}`),
+    "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝"
+  ].map(line => `> ${line}`).join("\\n");
 }
 
 function reaperSuccess(title, body = "") {
   return [
-    reaperHeader(),
-    "",
-    `*╔═━━━━━━━━━━━━━━━━━❐*`,
-    `*┃𖤍 *${title}*`,
-    ...String(body || "").split("\n").map(x => `*┃➺│ ${x}*`),
-    `*╚═━━━━━━━━━━━━━━━━━❐*`,
-    "",
-    `*⚙️ 𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁*`
-  ].join("\n");
+    "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 • 𝙎𝙐𝘾𝘾𝙀𝙎𝙎 〕═╗",
+    `┃☬│𓁹 ${title}`,
+    ...String(body || "").split("\\n").map(line => `┃☬│𓁹 ${line}`),
+    "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝"
+  ].map(line => `> ${line}`).join("\\n");
 }
 
-function reaperError(title = "REAPER ERROR", body = "") {
+function reaperError(title = "AURELIAN ERROR", body = "") {
   if (!body) {
     body = title;
     title = "SYSTEM ERROR";
   }
+
   return [
-    reaperHeader(),
-    "",
-    `*╔═━━━━━━━━━━━━━━━━━❐*`,
-    `*┃𖤍 *${title}* ⚠️`,
-    ...String(body || "").split("\n").map(x => `*┃➺│ ${x}*`),
-    `*╚═━━━━━━━━━━━━━━━━━❐*`,
-    "",
-    `*☠️ 𝚄𝚂𝙴 ${getPrefix()}𝙼𝙴𝙽𝚄 𝙵𝙾𝚁 𝙷𝙴𝙻𝙿.*`
-  ].join("\n");
+    "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 • 𝙴𝚁𝚁𝙾𝚁 〕═╗",
+    `┃☬│𓁹 ${title} ⚠️`,
+    ...String(body || "").split("\\n").map(line => `┃☬│𓁹 ${line}`),
+    "┃☬│𓁹 Use !menu for the command index.",
+    "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝"
+  ].map(line => `> ${line}`).join("\\n");
 }
 
 function reaperInfo(title, body = "") {
   return [
-    reaperHeader(),
-    "",
-    `*╔═━━━━━━━━━━━━━━━━━❐*`,
-    `*┃𖤍 *${title}*`,
-    ...String(body || "").split("\n").map(x => `*┃➺│ ${x}*`),
-    `*╚═━━━━━━━━━━━━━━━━━❐*`
-  ].join("\n");
+    "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 〕═╗",
+    `┃☬│𓁹 ${title}`,
+    ...String(body || "").split("\\n").map(line => `┃☬│𓁹 ${line}`),
+    "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝"
+  ].map(line => `> ${line}`).join("\\n");
 }
 
 function reaperUsage(command, example = "") {
@@ -463,11 +454,11 @@ function neededForLevel(level) {
 
 function updateRank(user) {
   if (user.level >= 50) {
-    user.rank = "Reaper Lord";
+    user.rank = "Aurelian Lord";
   } else if (user.level >= 30) {
-    user.rank = "Elite Reaper";
+    user.rank = "Elite Aurelian";
   } else if (user.level >= 20) {
-    user.rank = "Reaper";
+    user.rank = "Aurelian";
   } else if (user.level >= 12) {
     user.rank = "Dark Soul";
   } else if (user.level >= 6) {
@@ -717,6 +708,24 @@ async function react(
   } catch {}
 }
 
+function aurelianFormatText(text) {
+  const value = String(text ?? "");
+
+  return value
+    .split("\\n")
+    .map(line => {
+      // Remove an existing Aurelian quote prefix first.
+      // This prevents > > > when helpers already formatted the text.
+      const clean = line.replace(/^\\s*>\\s?/, "");
+      return `> ${clean}`;
+    })
+    .join("\\n");
+}
+
+function aurelianFormatCaption(caption = "") {
+  return aurelianFormatText(caption);
+}
+
 async function reply(
   sock,
   jid,
@@ -724,10 +733,13 @@ async function reply(
   msg
 ) {
   try {
+    const formattedText =
+      aurelianFormatText(text);
+
     return await sock.sendMessage(
       jid,
       {
-        text: String(text)
+        text: formattedText
       },
       msg
         ? { quoted: msg }
@@ -753,7 +765,7 @@ async function sendImage(
       jid,
       {
         image,
-        caption
+        caption: aurelianFormatCaption(caption)
       },
       msg
         ? { quoted: msg }
@@ -1149,7 +1161,7 @@ const COMMANDS = {
   GENERAL: [
     "menu","reaper","ping","alive","botinfo","runtime","owner","repo","support","status","profile","help","commands","uptime","version","prefix","jid","chatid","groupinfo","about","weather","time","define","wiki","calc","shorturl","ip","uuid","base64","unbase64","password"
   ],
-  "REAPER SYSTEM": [
+  "AURELIAN SYSTEM": [
     "rank","level","xp","coins","daily","claim","hunt","mission","quest","train","power","blood","soul","shadow","ritual","summon","curse","bless","reaperstats","achievements"
   ],
   BATTLE: [
@@ -1305,7 +1317,7 @@ return true;
       sock,
       jid,
       reaperBox(
-        "THE REAPER",
+        "AURELIAN",
         `┃ ⚡ Status: ONLINE
 ┃ ☠️ State: AWAKENED
 ┃ 🌐 Mode: ${getModeDisplay()}
@@ -1373,7 +1385,7 @@ return true;
     await reply(
       sock,
       jid,
-      `🦇 *REAPER RUNTIME*\n\n⏱️ ${formatUptime(
+      `🦇 *AURELIAN RUNTIME*\n\n⏱️ ${formatUptime(
         process.uptime()
       )}`,
       msg
@@ -1411,7 +1423,7 @@ return true;
     await reply(
       sock,
       jid,
-      `🦇 *CHAT JID*\n\n\`${jid}\``,
+      `🦇 *CHAT JID*\n\n${jid}`,
       msg
     );
 
@@ -1441,7 +1453,7 @@ return true;
           ? "REPOSITORY"
           : "SUPPORT",
         lower === "repo"
-          ? "The Reaper source is maintained through the configured project repository."
+          ? "Aurelian source is maintained through the configured project repository."
           : "Use the command system or contact the owner for support."
       ),
       msg
@@ -1482,7 +1494,7 @@ return true;
     await reply(
       sock,
       jid,
-      `🦇 *THE REAPER HELP*\n\n` +
+      `🦇 *AURELIAN HELP*\n\n` +
       `Use ${prefix}menu to see every command.\n\n` +
       `Example:\n` +
       `${prefix}profile\n` +
@@ -1511,7 +1523,7 @@ return true;
       sock,
       jid,
       reaperBox(
-        "REAPER PROFILE",
+        "AURELIAN PROFILE",
         `┃ 👤 ${user.name}
 ┃ ☠️ Rank: ${user.rank}
 ┃ ⚡ Level: ${user.level}
@@ -1558,7 +1570,7 @@ return true;
     await reply(
       sock,
       jid,
-      `🦇 *REAPER STATS*\n\n${body}`,
+      `🦇 *AURELIAN STATS*\n\n${body}`,
       msg
     );
 
@@ -1693,7 +1705,7 @@ ${
       sock,
       jid,
       reaperSuccess(
-        "REAPER HUNT",
+        "AURELIAN HUNT",
         `🎯 Hunt completed.
 🪙 Loot: +${reward} coins
 ⚡ XP: +${xp}
@@ -2139,7 +2151,7 @@ async function runEconomyCommand(
     await reply(
       sock,
       jid,
-      `🎒 *REAPER INVENTORY*\n\n${items}`,
+      `🎒 *AURELIAN INVENTORY*\n\n${items}`,
       msg
     );
 
@@ -2152,7 +2164,7 @@ async function runEconomyCommand(
       jid,
       `╔═══〔 🛒 SOUL SHOP 〕═══╗
 
-1. 🗡️ Reaper Blade — 500
+1. 🗡️ Aurelian Blade — 500
 2. 🛡️ Shadow Armor — 750
 3. 🩸 Blood Potion — 250
 4. 💎 Soul Crystal — 1,500
@@ -2177,7 +2189,7 @@ ${getPrefix()}buy crystal
 
     const shop = {
       blade: {
-        name: "Reaper Blade",
+        name: "Aurelian Blade",
         price: 500
       },
 
@@ -2371,7 +2383,7 @@ ${getPrefix()}buy crystal
     await reply(
       sock,
       jid,
-      "🦇 Wallet banking is handled through your Reaper coin balance. Use balance, give, buy and sell for the active economy.",
+      "🦇 Wallet banking is handled through your Aurelian coin balance. Use balance, give, buy and sell for the active economy.",
       msg
     );
 
@@ -2446,7 +2458,7 @@ async function runFunCommand(
     await reply(
       sock,
       jid,
-      `🦇 *REAPER QUOTE*\n\n“${random(
+      `🦇 *AURELIAN QUOTE*\n\n“${random(
         QUOTES
       )}”`,
       msg
@@ -2459,7 +2471,7 @@ async function runFunCommand(
     await reply(
       sock,
       jid,
-      `😂 *REAPER JOKE*\n\n${random(
+      `😂 *AURELIAN JOKE*\n\n${random(
         JOKES
       )}`,
       msg
@@ -2478,7 +2490,7 @@ async function runFunCommand(
     await reply(
       sock,
       jid,
-      `🔥 *REAPER ROAST*\n\n${
+      `🔥 *AURELIAN ROAST*\n\n${
         target
           ? `${target}: `
           : ""
@@ -2495,7 +2507,7 @@ async function runFunCommand(
     await reply(
       sock,
       jid,
-      `🦇 *REAPER COMPLIMENT*\n\n${random(
+      `🦇 *AURELIAN COMPLIMENT*\n\n${random(
         COMPLIMENTS
       )}`,
       msg
@@ -2508,7 +2520,7 @@ async function runFunCommand(
 }
 
 // ============================================================
-// THE REAPER — BLOCK 3/4
+// AURELIAN — BLOCK 3/4
 // GROUP MANAGEMENT • PROTECTION • AI • MEDIA • DOWNLOADER
 // STORY / QUEST SYSTEM
 // ============================================================
@@ -2525,7 +2537,7 @@ function ensureGroupSettings(jid) {
       welcome: settings.welcome,
       goodbye: settings.goodbye,
       welcomeText:
-        "🦇 Welcome @user to *THE REAPER* realm.",
+        "🦇 Welcome @user to *AURELIAN* realm.",
       goodbyeText:
         "☠️ @user has left the realm.",
       warnLimit: 3,
@@ -2639,7 +2651,7 @@ async function sendMentions(sock, jid, text, mentions = [], quoted = null) {
   return sock.sendMessage(
     jid,
     {
-      text,
+      text: aurelianFormatText(text),
       mentions
     },
     quoted ? { quoted } : {}
@@ -2841,7 +2853,7 @@ async function runGroupCommand(
         jid,
         reaperError(
           "BOT ADMIN",
-          "Make THE REAPER an administrator first."
+          "Make AURELIAN an administrator first."
         ),
         msg
       );
@@ -3155,7 +3167,7 @@ async function runGroupCommand(
       sock,
       jid,
       reaperBox(
-        "☠️ REAPER WARNING",
+        "☠️ AURELIAN WARNING",
         [
           `Target: @${target.split("@")[0]}`,
           `Warning: *${count}/${group.warnLimit}*`,
@@ -3234,7 +3246,7 @@ async function runGroupCommand(
 
     const text =
       args.join(" ").trim() ||
-      "☠️ THE REAPER summons the realm.";
+      "☠️ AURELIAN summons the realm.";
 
     await sendMentions(
       sock,
@@ -3586,7 +3598,7 @@ async function runGroupCommand(
               url
             },
             caption:
-              "☠️ *THE REAPER — GROUP PROFILE*"
+              aurelianFormatCaption("☠️ *AURELIAN — GROUP PROFILE*")
           },
           { quoted: msg }
         );
@@ -3711,7 +3723,7 @@ async function runGroupCommand(
         jid,
         reaperError(
           "ADMIN ONLY",
-          "You must be a group administrator to activate Reaper Hijack."
+          "You must be a group administrator to activate Aurelian Hijack."
         ),
         msg
       );
@@ -3734,17 +3746,17 @@ async function runGroupCommand(
       }
 
       const reaperName =
-        `☠️ THE REAPER — ${metadata.subject || "REALM"}`;
+        `☠️ AURELIAN — ${metadata.subject || "REALM"}`;
 
       const reaperDescription =
         [
-          "☠️ THE REAPER HAS TAKEN CONTROL ☠️",
+          "☠️ AURELIAN HAS TAKEN CONTROL ☠️",
           "",
-          "⚔️ This realm is under Reaper protection.",
+          "⚔️ This realm is under Aurelian protection.",
           "🩸 Respect the rules.",
           "🦇 Obey the administrators.",
           "",
-          "THE REAPER — KHAN-MD"
+          "AURELIAN — KHAN-MD"
         ].join("\n");
 
       await sock.groupUpdateSubject(
@@ -3774,7 +3786,7 @@ async function runGroupCommand(
         sock,
         jid,
         [
-          "☠️ *THE REAPER HAS AWAKENED*",
+          "☠️ *AURELIAN HAS AWAKENED*",
           "",
           "⚔️ GROUP HIJACK PROTOCOL: *ACTIVE*",
           "",
@@ -3819,7 +3831,7 @@ async function runGroupCommand(
       group.originalName = null;
       group.originalDescription = null;
       saveSettings();
-      await reply(sock, jid, reaperSuccess("REAPER CONTROL RELEASED", "The original group state has been restored where WhatsApp permissions allowed it."), msg);
+      await reply(sock, jid, reaperSuccess("AURELIAN CONTROL RELEASED", "The original group state has been restored where WhatsApp permissions allowed it."), msg);
     } catch (err) {
       await reply(sock, jid, reaperError("UNHIJACK FAILED", err?.message || "WhatsApp rejected one of the restore operations."), msg);
     }
@@ -4232,7 +4244,7 @@ async function runProtectionCommand(
     sock,
     jid,
     reaperBox(
-      "REAPER SECURITY",
+      "AURELIAN SECURITY",
       [
         `${lower}: ${groupSettingDisplay(group[lower])}`,
         "",
@@ -4595,7 +4607,7 @@ async function runMediaCommand(
         {
           image: buffer,
           caption:
-            "☠️ *THE REAPER QR TERMINAL*"
+            aurelianFormatCaption("☠️ *AURELIAN QR TERMINAL*")
         },
         {
           quoted: msg
@@ -4640,7 +4652,7 @@ async function runMediaCommand(
             url
           },
           caption:
-            `☠️ *REAPER PROFILE*\n${target.split("@")[0]}`
+            aurelianFormatCaption(`☠️ *AURELIAN PROFILE*\n${target.split("@")[0]}`)
         },
         {
           quoted: msg
@@ -4672,7 +4684,7 @@ async function runMediaCommand(
         jid,
         reaperError(
           "OWNER ONLY",
-          "Only the bot owner can change THE REAPER profile."
+          "Only the bot owner can change AURELIAN profile."
         ),
         msg
       );
@@ -4729,7 +4741,7 @@ async function runMediaCommand(
         jid,
         reaperSuccess(
           "PROFILE UPDATED",
-          "THE REAPER profile picture has been changed."
+          "AURELIAN profile picture has been changed."
         ),
         msg
       );
@@ -4848,7 +4860,7 @@ async function runMediaCommand(
           {
             image: buffer,
             caption:
-              "☠️ Recovered media."
+              aurelianFormatCaption("☠️ Recovered media.")
           },
           {
             quoted: msg
@@ -5180,7 +5192,7 @@ async function runDownloader(
     sock,
     jid,
     reaperInfo(
-      "REAPER DOWNLOAD",
+      "AURELIAN DOWNLOAD",
       `Processing: *${query}*\nMode: *${mode.toUpperCase()}*`
     ),
     msg
@@ -5256,7 +5268,7 @@ async function runDownloader(
 
     if (stat.size > maxBytes) {
       throw new Error(
-        "The downloaded file is larger than the WhatsApp upload limit used by THE REAPER."
+        "The downloaded file is larger than the WhatsApp upload limit used by AURELIAN."
       );
     }
 
@@ -5302,7 +5314,7 @@ async function runDownloader(
           fileName:
             filename,
           caption:
-            "☠️ *THE REAPER DOWNLOAD*"
+            aurelianFormatCaption("☠️ *AURELIAN DOWNLOAD*")
         },
         {
           quoted: msg
@@ -5366,7 +5378,7 @@ const STORY_CHAPTERS = [
     title:
       "Chapter I — The Awakening",
     text:
-      "The realm falls silent. A black moon rises above the dead city. From beneath the ruins, THE REAPER opens his eyes."
+      "The realm falls silent. A black moon rises above the dead city. From beneath the ruins, AURELIAN opens his eyes."
   },
   {
     title:
@@ -5394,17 +5406,17 @@ const STORY_CHAPTERS = [
   },
   {
     title:
-      "Chapter VI — Reaper's End",
+      "Chapter VI — Aurelian's End",
     text:
-      "The final gate opens. The Reaper must choose between eternal rule and restoring the realm."
+      "The final gate opens. Aurelian must choose between eternal rule and restoring the realm."
   }
 ];
 
 const STORY_DATA = {
   realm:
-    "The Reaper Realm exists between life and death, where lost souls become warriors and ancient kings refuse to disappear.",
+    "Aurelian Realm exists between life and death, where lost souls become warriors and ancient kings refuse to disappear.",
   character:
-    "THE REAPER — Warden of the boundary. Armed with the Void Scythe and bound to the realm by an ancient oath.",
+    "AURELIAN — Warden of the boundary. Armed with the Void Scythe and bound to the realm by an ancient oath.",
   artifact:
     "The Void Scythe — an artifact said to cut through curses, shadows and forgotten memories.",
   relic:
@@ -5457,7 +5469,7 @@ async function runStoryCommand(
       sock,
       jid,
       reaperBox(
-        "☠️ THE REAPER CHRONICLES",
+        "☠️ AURELIAN CHRONICLES",
         [
           `Current chapter: *${story.chapter + 1}/${STORY_CHAPTERS.length}*`,
           "",
@@ -5677,7 +5689,7 @@ async function runStoryCommand(
         [
           "The final gate opens.",
           "",
-          "The Reaper raises the Last Scythe.",
+          "Aurelian raises the Last Scythe.",
           "The realm falls silent.",
           "",
           "*THE END IS ONLY THE BEGINNING.*"
@@ -5697,7 +5709,7 @@ async function runStoryCommand(
 // BLOCK 3 END
 // ============================================================
 // ============================================================
-// THE REAPER — BLOCK 4/4
+// AURELIAN — BLOCK 4/4
 // FINAL ROUTER • OWNER • EVENTS • AI AUTO-REPLY • CONNECTION
 // ============================================================
 
@@ -5719,10 +5731,10 @@ async function downloadMediaMessage(...args) {
 // ------------------------------------------------------------
 
 const commandCooldowns =
-  globalThis.__REAPER_COMMAND_COOLDOWNS ||
+  globalThis.__AURELIAN_COMMAND_COOLDOWNS ||
   new Map();
 
-globalThis.__REAPER_COMMAND_COOLDOWNS =
+globalThis.__AURELIAN_COMMAND_COOLDOWNS =
   commandCooldowns;
 
 function getCommandCooldown(command) {
@@ -5852,7 +5864,7 @@ async function runOwnerCommand(
       sock,
       jid,
       reaperBox(
-        "☠️ THE REAPER",
+        "☠️ AURELIAN",
         [
           `Owner: *${OWNER_NAME}*`,
           `Number: *${owner || "Not configured"}*`,
@@ -5875,7 +5887,7 @@ async function runOwnerCommand(
       jid,
       reaperError(
         "OWNER ONLY",
-        "This command is restricted to THE REAPER owner."
+        "This command is restricted to AURELIAN owner."
       ),
       msg
     );
@@ -5929,7 +5941,7 @@ async function runOwnerCommand(
       jid,
       reaperSuccess(
         "MODE UPDATED",
-        `THE REAPER is now *${getModeDisplay()}*.`
+        `AURELIAN is now *${getModeDisplay()}*.`
       ),
       msg
     );
@@ -6255,7 +6267,7 @@ async function runOwnerCommand(
       sock,
       jid,
       reaperBox(
-        "THE REAPER SETTINGS",
+        "AURELIAN SETTINGS",
         [
           `Mode: *${getModeDisplay()}*`,
           `Prefix: *${getPrefix()}*`,
@@ -6399,7 +6411,7 @@ async function runOwnerCommand(
           {
             text:
               reaperBox(
-                "☠️ THE REAPER BROADCAST",
+                "☠️ AURELIAN BROADCAST",
                 message
               )
           }
@@ -6583,7 +6595,7 @@ async function runOwnerCommand(
       jid,
       reaperBox(
         "☠️ RESTARTING",
-        "THE REAPER is restarting..."
+        "AURELIAN is restarting..."
       ),
       msg
     );
@@ -6604,7 +6616,7 @@ async function runOwnerCommand(
       jid,
       reaperBox(
         "☠️ SHUTDOWN",
-        "THE REAPER is going offline..."
+        "AURELIAN is going offline..."
       ),
       msg
     );
@@ -6660,7 +6672,7 @@ async function runCommand(
             jid,
             {
               image: fs.readFileSync(media.path),
-              caption: text
+              caption: aurelianFormatCaption(text)
             },
             { quoted: msg }
           );
@@ -7268,7 +7280,7 @@ async function runCommand(
           await sock.sendMessage(
             jid,
             {
-              text: result.text,
+              text: aurelianFormatText(result.text),
               mentions: result.mentions
             },
             { quoted: msg }
@@ -7801,7 +7813,7 @@ async function handleGroupParticipantsUpdate(
       const text =
         String(
           group.welcomeText ||
-          "🦇 Welcome @user to THE REAPER realm."
+          "🦇 Welcome @user to AURELIAN realm."
         )
         .replace(
           /@user/g,
@@ -7811,7 +7823,7 @@ async function handleGroupParticipantsUpdate(
       await sock.sendMessage(
         jid,
         {
-          text,
+          text: aurelianFormatText(text),
           mentions: [
             participant
           ]
@@ -7839,7 +7851,7 @@ async function handleGroupParticipantsUpdate(
       await sock.sendMessage(
         jid,
         {
-          text,
+          text: aurelianFormatText(text),
           mentions: [
             participant
           ]
@@ -7867,16 +7879,6 @@ async function handleIncomingCall(
         item.from;
 
       if (!caller) continue;
-
-      const text =
-        "🛡️ *REAPER SECURITY*\n\nCalls are not accepted by THE REAPER.";
-
-      await sock.sendMessage(
-        caller,
-        {
-          text
-        }
-      );
 
       if (
         typeof sock.rejectCall ===
@@ -8106,7 +8108,7 @@ async function startBot() {
             "\n=============================="
           );
           console.log(
-            "THE REAPER PAIRING CODE"
+            "AURELIAN PAIRING CODE"
           );
           console.log(
             code
@@ -8129,7 +8131,7 @@ async function startBot() {
         connection === "open"
       ) {
         console.log(
-          "🦇 THE REAPER HAS AWAKENED — CONNECTED"
+          "🦇 AURELIAN HAS AWAKENED — CONNECTED"
         );
 
         console.log(
@@ -8437,7 +8439,7 @@ async function startBot() {
             jid,
             reaperError(
               "UNKNOWN COMMAND",
-              `*${cmd}* is not a THE REAPER command.\n\nUse *${prefix}menu* to view the command system.`
+              `*${cmd}* is not a AURELIAN command.\n\nUse *${prefix}menu* to view the command system.`
             ),
             msg
           );
@@ -8512,7 +8514,7 @@ async function startBot() {
               target,
               reaperError(
                 "SYSTEM ERROR",
-                "THE REAPER encountered an internal error while processing that command."
+                "AURELIAN encountered an internal error while processing that command."
               ),
               messages[0]
             );
@@ -8556,7 +8558,7 @@ process.on(
 
 
 // ============================================================
-// START THE REAPER
+// START AURELIAN
 // ============================================================
 
 startBot().catch(
