@@ -4872,7 +4872,7 @@ async function runMediaCommand(
           {
             video: buffer,
             caption:
-              "☠️ Recovered media."
+              aurelianFormatCaption("☠️ Recovered media.")
           },
           {
             quoted: msg
