@@ -279,10 +279,10 @@ function formatDuration(ms) {
 
 function reaperHeader() {
   return [
-    "╔═〔 ☬ 𓁹 𝘼𝙐𝙍𝙀𝙇𝙄𝘼𝙉 𓁹 ☬ 〕═╗",
-    "┃☬│𓁹 𝙏𝙃𝙀 𝙋𝙍𝙄𝙈𝙊𝙍𝘿𝙄𝘼𝙇 𝙇𝙊𝙍𝘿",
-    "┃☬│𓁹 𝙏𝙃𝙀 𝙁𝙄𝙍𝙎𝙏 𝙀𝙏𝙀𝙍𝙉𝘼𝙇",
-    "╚═〔 ☬ 𓁹 𝘼𝙐𝙍𝙀𝙇𝙄𝘼𝙉 𓁹 ☬ 〕═╝"
+    "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 〕═╗",
+    "┃☬│𓁹 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 — 𝚃𝙷𝙴 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳",
+    "┃☬│𓁹 𝙰𝚗𝚌𝚒𝚎𝚗𝚝 𝙿𝚘𝚠𝚎𝚛 • 𝙸𝚖𝚖𝚘𝚛𝚝𝚊𝚕𝚒𝚝𝚢 • 𝚁𝚎𝚋𝚒𝚛𝚝𝚑 • 𝙼𝚢𝚜𝚝𝚎𝚛𝚢",
+    "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝"
   ].map(line => `> ${line}`).join("\\n");
 }
 
@@ -712,14 +712,14 @@ function aurelianFormatText(text) {
   const value = String(text ?? "");
 
   return value
-    .split("\\n")
+    .split("\n")
     .map(line => {
       // Remove an existing Aurelian quote prefix first.
       // This prevents > > > when helpers already formatted the text.
-      const clean = line.replace(/^\\s*>\\s?/, "");
+      const clean = line.replace(/^\s*>\s?/, "");
       return `> ${clean}`;
     })
-    .join("\\n");
+    .join("\n");
 }
 
 function aurelianFormatCaption(caption = "") {
@@ -1198,7 +1198,7 @@ const COMMANDS = {
     "pair","session","logout"
   ],
   NEWSLETTER: [
-    "newsletter","followchannel","unfollowchannel"
+    "newsletter","followchannel","unfollowchannel","channel"
   ],
   BUGS: [
     "bug","report","feedback"
@@ -1255,59 +1255,221 @@ async function runGeneralCommand(
     const now = new Date();
     const time = now.toLocaleTimeString("en-GB");
     const date = now.toLocaleDateString("en-GB");
+
+    const gothicMap = {
+      a: "𝖆", b: "𝖇", c: "𝖈", d: "𝖉", e: "𝖊",
+      f: "𝖋", g: "𝖌", h: "𝖍", i: "𝖎", j: "𝖏",
+      k: "𝖐", l: "𝖑", m: "𝖒", n: "𝖓", o: "𝖔",
+      p: "𝖕", q: "𝖖", r: "𝖗", s: "𝖘", t: "𝖙",
+      u: "𝖚", v: "𝖛", w: "𝖜", x: "𝖝", y: "𝖞",
+      z: "𝖟"
+    };
+
+    const gothicCommand = command =>
+      String(command)
+        .split("")
+        .map(char => gothicMap[char] || char)
+        .join("");
+
     const sections = [
-      ["☠️", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙲𝙾𝚁𝙴", ["menu","ping","alive","botinfo","status","runtime","profile","help","about","owner","repo"]],
-      ["⚔️", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙱𝙰𝚃𝚃𝙻𝙴", ["fight","duel","battle","challenge","attack","defend","heal","weapon","armor","skills","boss","raid","arena","revenge"]],
-      ["🩸", "𝚂𝙾𝚄𝙻 𝚅𝙰𝚄𝙻𝚃", ["balance","wallet","coins","daily","work","crime","hunt","mission","quest","shop","buy","sell","inventory"]],
-      ["🎮", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙰𝚁𝙲𝙰𝙳𝙴", ["dice","guess","rps","trivia","blackjack","slots","roulette","coinflip","hangman","tictactoe","connect4","snake"]],
-      ["🛡️", "𝚁𝙴𝙰𝙿𝙴𝚁 𝚂𝙴𝙲𝚄𝚁𝙸𝚃𝚈", ["antilink","antibadword","antispam","antiflood","anticall","antidelete","antiedit","antibot","antitag","antimention"]],
-      ["📥", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳", ["play","yt","ytmp3","ytmp4","tiktok","ig","facebook","twitter","movie","music","video","download"]],
-      ["🧠", "𝚁𝙴𝙰𝙿𝙴𝚁 𝙸𝙽𝚃𝙴𝙻𝙻𝙸𝙶𝙴𝙽𝙲𝙴", ["ai","chat","ask","explain","rewrite","summarize","translate"]],
-      ["👥", "𝙶𝚁𝙾𝚄𝙿 𝙲𝙾𝙽𝚃𝚁𝙾𝙻", ["groupinfo","admins","members","tagall","hidetag","promote","demote","kick","add","warn","mute","unmute","welcome","goodbye","hijack","unhijack"]],
-      ["👑", "𝙲𝙾𝙽𝚃𝚁𝙾𝙻 𝙲𝙾𝚁𝙴", ["mode","setprefix","broadcast","block","unblock","sudo","restart","shutdown","reload"]]
+      [
+        "☬",
+        "𝙱𝙾𝚃 𝙸𝙽𝚃𝙴𝙻𝙻𝙸𝙶𝙴𝙽𝙲𝙴",
+        [
+          "menu", "ping", "alive", "botinfo", "owner",
+          "profile", "card", "status", "runtime", "uptime",
+          "devices", "sessions"
+        ]
+      ],
+      [
+        "☬",
+        "𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝚁𝙴𝙰𝙻𝙼",
+        [
+          "lore", "awakening", "power", "realm", "reign",
+          "oracle", "immortal", "origin", "legend", "primordial"
+        ]
+      ],
+      [
+        "☬",
+        "𝙳𝙰𝚁𝙺 𝙰𝚁𝚃𝚂",
+        [
+          "darkness", "shadow", "curse", "doom", "void",
+          "soul", "fear", "death", "abyss"
+        ]
+      ],
+      [
+        "☬",
+        "𝙰𝙸 & 𝙸𝙽𝚃𝙴𝙻𝙻𝙸𝙶𝙴𝙽𝙲𝙴",
+        [
+          "ai", "ask", "chat", "translate", "summarize",
+          "imagine", "rewrite", "explain", "code", "chatbot"
+        ]
+      ],
+      [
+        "☬",
+        "𝙶𝚁𝙾𝚄𝙿 𝙼𝙰𝙽𝙰𝙶𝙴𝙼𝙴𝙽𝚃",
+        [
+          "add", "kick", "promote", "demote", "tagall",
+          "hidetag", "groupinfo", "link", "revoke", "setname",
+          "setdesc", "welcome", "goodbye", "mute", "unmute",
+          "join", "hijack", "gcstatus", "gclist"
+        ]
+      ],
+      [
+        "☬",
+        "𝙼𝙴𝙳𝙸𝙰 𝙳𝙾𝚆𝙽𝙻𝙾𝙰𝙳𝚂",
+        [
+          "yt", "yta", "ytv", "tiktok", "instagram",
+          "facebook", "twitter", "mediafire", "apk", "play"
+        ]
+      ],
+      [
+        "☬",
+        "𝙼𝙴𝙳𝙸𝙰 𝙻𝙰𝙱",
+        [
+          "sticker", "toimg", "tomp3", "tomp4", "gif",
+          "take", "resize", "blur", "tts", "qr"
+        ]
+      ],
+      [
+        "☬",
+        "𝚂𝙾𝙲𝙸𝙰𝙻 & 𝙴𝙽𝚃𝙴𝚁𝚃𝙰𝙸𝙽𝙼𝙴𝙽𝚃",
+        [
+          "meme", "joke", "quote", "fact", "ship",
+          "rate", "truth", "dare", "roast", "compliment", "8ball"
+        ]
+      ],
+      [
+        "☬",
+        "𝙶𝙰𝙼𝙴𝚂 & 𝙲𝙷𝙰𝙻𝙻𝙴𝙽𝙶𝙴𝚂",
+        [
+          "rps", "dice", "coinflip", "guess", "trivia",
+          "quiz", "battle", "hunt", "duel", "adventure",
+          "rank", "slots", "casino"
+        ]
+      ],
+      [
+        "☬",
+        "𝙴𝙲𝙾𝙽𝙾𝙼𝚈 & 𝚆𝙴𝙰𝙻𝚃𝙷",
+        [
+          "balance", "daily", "weekly", "work", "crime",
+          "rob", "deposit", "withdraw", "shop", "inventory",
+          "sell", "leaderboard"
+        ]
+      ],
+      [
+        "☬",
+        "𝚂𝙴𝙲𝚄𝚁𝙸𝚃𝚈 & 𝙿𝚁𝙾𝚃𝙴𝙲𝚃𝙸𝙾𝙽",
+        [
+          "antihijack", "antipromote", "antidemote", "antilink",
+          "antispam", "antibot", "antitag", "antiraid"
+        ]
+      ],
+      [
+        "☬",
+        "𝙰𝚄𝚃𝙾𝙼𝙰𝚃𝙸𝙾𝙽 𝚂𝚈𝚂𝚃𝙴𝙼𝚂",
+        [
+          "autoread", "autotyping", "autorecording", "autoview",
+          "autostatus", "autobio", "autolike"
+        ]
+      ],
+      [
+        "☬",
+        "𝚂𝚈𝚂𝚃𝙴𝙼 𝚂𝙴𝚃𝚃𝙸𝙽𝙶𝚂",
+        [
+          "prefix", "mode", "setbio", "setname", "setstatus",
+          "setmenu", "timezone"
+        ]
+      ],
+      [
+        "☬",
+        "𝙾𝚆𝙽𝙴𝚁 𝙲𝙾𝙽𝚃𝚁𝙾𝙻",
+        [
+          "broadcast", "bcgroup", "eval", "exec", "restart",
+          "shutdown", "update", "setpp", "block", "unblock"
+        ]
+      ],
+      [
+        "☬",
+        "𝙽𝙴𝚆𝚂 & 𝙸𝙽𝚃𝙴𝙻𝙻𝙸𝙶𝙴𝙽𝙲𝙴",
+        [
+          "news", "headlines", "technews", "sportsnews"
+        ]
+      ],
+      [
+        "☬",
+        "𝙱𝚄𝙶𝚂 & 𝚁𝙴𝙿𝙾𝚁𝚃𝚂",
+        [
+          "bug", "report", "request", "suggest"
+        ]
+      ],
+      [
+        "☬",
+        "𝚄𝚃𝙸𝙻𝙸𝚃𝚈 𝙲𝙴𝙽𝚃𝙴𝚁",
+        [
+          "weather", "time", "calc", "short",
+          "github", "google", "wikipedia"
+        ]
+      ]
     ];
-    const blocks = sections.map(([icon, name, commands]) => [
-      `*┏━❐〔 ${icon} *${name}* 〕━┈❐`,
-      ...commands.map(command => `*┃➺│ ${prefix}${command}*`),
-      `*┗━━━━━━━━━━━━━━━━┈❐*`
-    ].join("\n"));
+
+    const menuCommandSet = new Set(
+      sections.flatMap(([, , commands]) => commands)
+    );
+
+    const commandCount = menuCommandSet.size;
+
+    const blocks = sections.map(
+      ([icon, name, commands]) => [
+        `╔═〔 ${icon} ${name} 〕═╗`,
+        ...commands.map(
+          command =>
+            `┃☬│𓁹 ${prefix}${gothicCommand(command)}`
+        ),
+        "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝"
+      ].join("\n")
+    );
+
     const text = [
-      reaperHeader(),
-      "",
-      `*╔═━━━━━━━━━━━━━━━━━❐*`,
-      `*┃𖤍 *𝙾𝚆𝙽𝙴𝚁:* 𝚁𝙴𝙰𝙿𝙴𝚁 𝙲𝙾𝚁𝙴 ☠️*`,
-      `*┃𖤍 *𝚅𝙴𝚁𝚂𝙸𝙾𝙽:* ${VERSION}*`,
-      `*┃𖤍 *𝚄𝚂𝙴𝚁:* @${String(sender || "").split("@")[0]}*`,
-      `*┃𖤍 *𝚃𝙸𝙼𝙴:* ${time}*`,
-      `*┃𖤍 *𝚄𝙿𝚃𝙸𝙼𝙴:* ${formatUptime(process.uptime())}*`,
-      `*┃𖤍 *𝚃𝙾𝚃𝙰𝙻 𝙲𝙼𝙳:* ${ALL_COMMANDS.size}+*`,
-      `*┃𖤍 *𝙼𝙾𝙳𝙴:* ${getModeDisplay()}*`,
-      `*┃𖤍 *𝙿𝚁𝙴𝙵𝙸𝚇:* ${prefix}*`,
-      `*┃𖤍 *𝙳𝙰𝚃𝙴:* ${date}*`,
-      `*╚═━━━━━━━━━━━━━━━━━❐*`,
+      "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 〕═╗",
+      "┃☬│𓁹 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 — 𝚃𝙷𝙴 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳",
+      "┃☬│𓁹 𝙰𝚗𝚌𝚒𝚎𝚗𝚝 𝙿𝚘𝚠𝚎𝚛 • 𝙸𝚖𝚖𝚘𝚛𝚝𝚊𝚕𝚒𝚝𝚢 • 𝚁𝚎𝚋𝚒𝚛𝚝𝚑 • 𝙼𝚢𝚜𝚝𝚎𝚛𝚢",
+      `┃☬│𓁹 𝙼𝚘𝚍𝚎 : ${getModeDisplay().toUpperCase()}`,
+      "┃☬│𓁹 𝚂𝚝𝚊𝚝𝚞𝚜 : 𝙰𝚆𝙰𝙺𝙴𝙽𝙴𝙳",
+      `┃☬│𓁹 𝙿𝚛𝚎𝚏𝚒𝚡 : ${prefix}`,
+      `┃☬│𓁹 𝙲𝚘𝚖𝚖𝚊𝚗𝚍𝚜 : ${commandCount}`,
+      `┃☬│𓁹 𝚃𝚒𝚖𝚎 : ${time}`,
+      `┃☬│𓁹 𝙳𝚊𝚝𝚎 : ${date}`,
+      `┃☬│𓁹 𝚄𝚙𝚝𝚒𝚖𝚎 : ${formatUptime(process.uptime())}`,
+      "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝",
       "",
       ...blocks,
       "",
-      `*╭━━━━━━━𖤍━━━━━━━╮*`,
-      `*┃ 𝚆𝙴 𝙰𝚁𝙴 𝙽𝙾𝚃 𝙷𝙴𝚁𝙴 𝚃𝙾 𝙵𝙾𝙻𝙻𝙾𝚆.*`,
-      `*┃ 𝚆𝙴 𝙰𝚁𝙴 𝙷𝙴𝚁𝙴 𝚃𝙾 𝙻𝙴𝙰𝚅𝙴 𝙰 𝙼𝙰𝚁𝙺. ☠️*`,
-      `*╰━━━━━━━𖤍━━━━━━━╯*`,
+      "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 〕═╗",
+      "┃☬│𓁹 𝔄𝔫𝔠𝔦𝔢𝔫𝔱 𝔓𝔬𝔴𝔢𝔯 • 𝔐𝔪𝔬𝔯𝔱𝔞𝔩𝔦𝔱𝔶",
+      "┃☬│𓁹 𝔕𝔢𝔟𝔦𝔯𝔱𝔥 • 𝔐𝔶𝔰𝔱𝔢𝔯𝔶",
+      "┃☬│𓁹 “ℑ 𝔡𝔬𝔫'𝔱 𝔠𝔥𝔞𝔰𝔢 𝔡𝔢𝔞𝔱𝔥.",
+      "┃☬│𓁹 𝔇𝔢𝔞𝔱𝔥 𝔨𝔫𝔬𝔴𝔰 𝔴𝔥𝔢𝔯𝔢 𝔱𝔬 𝔣𝔦𝔫𝔡 𝔪𝔢.”",
+      "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝",
       "",
-      `*⚙️ 𝙿𝙾𝚆𝙴𝚁𝙴𝙳 𝙱𝚈 𝚃𝙷𝙴 𝚁𝙴𝙰𝙿𝙴𝚁*`
+      "⚡ 𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙿𝚛𝚘𝚜𝚔𝚒"
     ].join("\n");
+
     if (settings.menuImage && fs.existsSync(BANNER_FILE)) {
-  await sendImage(
-    sock,
-    jid,
-    fs.readFileSync(BANNER_FILE),
-    text,
-    msg
-  );
-} else {
-  await reply(sock, jid, text, msg);
-}
-return true;
+      await sendImage(
+        sock,
+        jid,
+        fs.readFileSync(BANNER_FILE),
+        aurelianFormatCaption(text),
+        msg
+      );
+    } else {
+      await reply(sock, jid, text, msg);
     }
+
+    return true;
+  }
+
   if (
     lower === "reaper" ||
     lower === "alive" ||
@@ -6661,6 +6823,185 @@ async function runCommand(
       "User";
 
     try {
+      // ---------------- CHANNEL REACTIONS ----------------
+
+      if (lower === "channel") {
+        const subcommand =
+          String(args?.[0] || "").toLowerCase();
+
+        if (subcommand !== "react") {
+          await reply(
+            sock,
+            jid,
+            reaperError(
+              "CHANNEL SYSTEM",
+              "Usage:\n!channel react <emoji>\n\nReply to a Channel post, or use:\n!channel react <channel-post-link> <emoji>"
+            ),
+            msg
+          );
+
+          return true;
+        }
+
+        const quoted =
+          msg?.message?.extendedTextMessage?.contextInfo?.quotedMessage ||
+          msg?.message?.imageMessage?.contextInfo?.quotedMessage ||
+          msg?.message?.videoMessage?.contextInfo?.quotedMessage ||
+          msg?.message?.documentMessage?.contextInfo?.quotedMessage;
+
+        const quotedKey =
+          msg?.message?.extendedTextMessage?.contextInfo?.stanzaId
+            ? {
+                remoteJid:
+                  msg?.message?.extendedTextMessage?.contextInfo?.remoteJid ||
+                  jid,
+                id:
+                  msg?.message?.extendedTextMessage?.contextInfo?.stanzaId,
+                server_id:
+                  msg?.message?.extendedTextMessage?.contextInfo?.serverId ||
+                  msg?.message?.extendedTextMessage?.contextInfo?.server_id
+              }
+            : null;
+
+        const rawArgs = Array.isArray(args) ? args.slice(1) : [];
+
+        const possibleLink =
+          rawArgs.find(
+            value =>
+              /^https?:\/\/(?:www\.)?whatsapp\.com\/channel\//i.test(value)
+          );
+
+        const emojiArgs =
+          possibleLink
+            ? rawArgs.filter(value => value !== possibleLink)
+            : rawArgs;
+
+        const reaction =
+          emojiArgs.join(" ").trim();
+
+        if (!reaction) {
+          await reply(
+            sock,
+            jid,
+            reaperError(
+              "CHANNEL REACTION",
+              "Provide a reaction emoji.\n\nExample:\n!channel react ❤️"
+            ),
+            msg
+          );
+
+          return true;
+        }
+
+        let channelJid = null;
+        let serverId = null;
+
+        // ----------------------------------------------------
+        // METHOD 1: REPLY TO A CHANNEL POST
+        // ----------------------------------------------------
+
+        if (
+          msg?.key?.remoteJid?.endsWith("@newsletter") &&
+          msg?.key?.server_id
+        ) {
+          channelJid = msg.key.remoteJid;
+          serverId = msg.key.server_id;
+        }
+
+        if (
+          !channelJid &&
+          quotedKey?.remoteJid?.endsWith("@newsletter") &&
+          quotedKey?.server_id
+        ) {
+          channelJid = quotedKey.remoteJid;
+          serverId = quotedKey.server_id;
+        }
+
+        // ----------------------------------------------------
+        // METHOD 2: CHANNEL POST LINK
+        // ----------------------------------------------------
+
+        if (!channelJid && possibleLink) {
+          const match =
+            possibleLink.match(
+              /^https?:\/\/(?:www\.)?whatsapp\.com\/channel\/([^/?#]+)\/([^/?#]+)/i
+            );
+
+          if (match) {
+            const inviteCode = match[1];
+            serverId = match[2];
+
+            try {
+              const metadata =
+                await sock.newsletterMetadata(
+                  "invite",
+                  inviteCode
+                );
+
+              channelJid =
+                metadata?.id ||
+                metadata?.jid ||
+                null;
+            } catch (error) {
+              console.error(
+                "Channel metadata error:",
+                error?.message || error
+              );
+            }
+          }
+        }
+
+        if (!channelJid || !serverId) {
+          await reply(
+            sock,
+            jid,
+            reaperError(
+              "CHANNEL POST NOT FOUND",
+              "I could not identify the Channel post.\n\nReply directly to a Channel post and use:\n!channel react ❤️\n\nOr provide a Channel post link:\n!channel react https://whatsapp.com/channel/.../123 ❤️"
+            ),
+            msg
+          );
+
+          return true;
+        }
+
+        try {
+          await sock.newsletterReactMessage(
+            channelJid,
+            String(serverId),
+            reaction
+          );
+
+          await reply(
+            sock,
+            jid,
+            reaperSuccess(
+              "CHANNEL REACTION",
+              `Reaction ${reaction} applied successfully.`
+            ),
+            msg
+          );
+        } catch (error) {
+          console.error(
+            "Channel reaction error:",
+            error?.message || error
+          );
+
+          await reply(
+            sock,
+            jid,
+            reaperError(
+              "CHANNEL REACTION FAILED",
+              error?.message ||
+                "AURELIAN could not react to that Channel post."
+            ),
+            msg
+          );
+        }
+
+        return true;
+      }
+
       // ---------------- BOT INFO ----------------
 
       if (lower === "menu" || lower === "help" || lower === "commands") {
@@ -6684,7 +7025,38 @@ async function runCommand(
       }
 
       if (lower === "card" || lower === "profile") {
-        await reply(sock, jid, Aurelian.getAurelianCard(), msg);
+        try {
+          const media = await Aurelian.createAurelianCard();
+
+          if (media?.path && fs.existsSync(media.path)) {
+            await sock.sendMessage(
+              jid,
+              {
+                image: fs.readFileSync(media.path),
+                caption: aurelianFormatCaption(
+                  "☬ 𓁹 AURELIAN — THE PRIMORDIAL LORD"
+                )
+              },
+              { quoted: msg }
+            );
+          } else {
+            await reply(
+              sock,
+              jid,
+              "⚠️ Unable to generate the Aurelian card.",
+              msg
+            );
+          }
+        } catch (error) {
+          console.error("Aurelian card error:", error);
+          await reply(
+            sock,
+            jid,
+            "⚠️ Aurelian card generation failed.",
+            msg
+          );
+        }
+
         return true;
       }
 
