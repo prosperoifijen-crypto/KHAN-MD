@@ -12,7 +12,7 @@ export const CONFIG_DIR = path.join(ROOT, "config");
 export const PERSISTENT_DIR =
   process.env.RAILWAY_VOLUME_MOUNT_PATH ||
   process.env.PERSISTENT_DIR ||
-  path.join(ROOT, "persistent");
+  ROOT;
 
 export const DATA_DIR = path.join(PERSISTENT_DIR, "data");
 export const SESSIONS_DIR = path.join(PERSISTENT_DIR, "sessions");

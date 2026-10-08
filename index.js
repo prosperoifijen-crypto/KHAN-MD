@@ -65,7 +65,7 @@ const DEFAULT_PREFIX = "!";
 const PERSISTENT_DIR =
   process.env.RAILWAY_VOLUME_MOUNT_PATH ||
   process.env.PERSISTENT_DIR ||
-  path.join(__dirname, "persistent");
+  path.join(__dirname);
 
 const DATA_DIR = path.join(PERSISTENT_DIR, "data");
 const DOWNLOAD_DIR = path.join(__dirname, "downloads");
