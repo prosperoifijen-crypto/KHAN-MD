@@ -1363,7 +1363,7 @@ return true;
       jid,
       reaperBox(
         "BOT INFORMATION",
-        `┃ 🦇 Name: ${BOT_NAME}
+        `┃ 👑 Name: ${BOT_NAME}
 ┃ ⚡ Version: ${VERSION}
 ┃ 👑 Owner: ${OWNER_NAME}
 ┃ 📦 Baileys: 6.7.23
@@ -1385,7 +1385,7 @@ return true;
     await reply(
       sock,
       jid,
-      `🦇 *AURELIAN RUNTIME*\n\n⏱️ ${formatUptime(
+      `⚡ *AURELIAN RUNTIME*\n\n⏱️ ${formatUptime(
         process.uptime()
       )}`,
       msg
@@ -1423,7 +1423,7 @@ return true;
     await reply(
       sock,
       jid,
-      `🦇 *CHAT JID*\n\n${jid}`,
+      `💬 *CHAT JID*\n\n${jid}`,
       msg
     );
 
@@ -1434,7 +1434,7 @@ return true;
     await reply(
       sock,
       jid,
-      `🦇 *CURRENT PREFIX*\n\n${prefix}\n\nPrefix is optional for normal commands.`,
+      `⚙️ *CURRENT PREFIX*\n\n${prefix}\n\nPrefix is optional for normal commands.`,
       msg
     );
 
@@ -1494,7 +1494,7 @@ return true;
     await reply(
       sock,
       jid,
-      `🦇 *AURELIAN HELP*\n\n` +
+      `ℹ️ *AURELIAN HELP*\n\n` +
       `Use ${prefix}menu to see every command.\n\n` +
       `Example:\n` +
       `${prefix}profile\n` +
@@ -1570,7 +1570,7 @@ return true;
     await reply(
       sock,
       jid,
-      `🦇 *AURELIAN STATS*\n\n${body}`,
+      `📊 *AURELIAN STATS*\n\n${body}`,
       msg
     );
 
@@ -1597,7 +1597,7 @@ return true;
       await reply(
         sock,
         jid,
-        `🦇 *DAILY ALREADY CLAIMED*\n\n⏳ Try again in ${formatDuration(
+        `⏳ *DAILY ALREADY CLAIMED*\n\n⏳ Try again in ${formatDuration(
           remaining
         )}.`,
         msg
@@ -1793,7 +1793,7 @@ async function runEconomyCommand(
       await reply(
         sock,
         jid,
-        `🦇 *${lower.toUpperCase()} COOLDOWN*\n\n⏳ Try again in ${formatDuration(
+        `⏳ *${lower.toUpperCase()} COOLDOWN*\n\n⏳ Try again in ${formatDuration(
           cooldowns[lower] -
           (now - user[lastKey])
         )}.`,
@@ -1897,7 +1897,7 @@ async function runEconomyCommand(
         await reply(
           sock,
           jid,
-          `🦇 Tag or reply to the soul you want to rob.\n\nExample: ${getPrefix()}rob @user`,
+          `💰 Tag or reply to the soul you want to rob.\n\nExample: ${getPrefix()}rob @user`,
           msg
         );
 
@@ -1912,7 +1912,7 @@ async function runEconomyCommand(
         await reply(
           sock,
           jid,
-          "🦇 You cannot rob yourself.",
+          "🚫 You cannot rob yourself.",
           msg
         );
 
@@ -1933,7 +1933,7 @@ async function runEconomyCommand(
         await reply(
           sock,
           jid,
-          "🦇 That soul has no coins to steal.",
+          "💰 That soul has no coins to steal.",
           msg
         );
 
@@ -2015,7 +2015,7 @@ async function runEconomyCommand(
       await reply(
         sock,
         jid,
-        `🦇 Usage: ${getPrefix()}${lower} <amount> @user`,
+        `💰 Usage: ${getPrefix()}${lower} <amount> @user`,
         msg
       );
 
@@ -2029,7 +2029,7 @@ async function runEconomyCommand(
       await reply(
         sock,
         jid,
-        "🦇 Enter a valid coin amount.",
+        "💰 Enter a valid coin amount.",
         msg
       );
 
@@ -2042,7 +2042,7 @@ async function runEconomyCommand(
       await reply(
         sock,
         jid,
-        "🦇 You cannot transfer coins to yourself.",
+        "🚫 You cannot transfer coins to yourself.",
         msg
       );
 
@@ -2055,7 +2055,7 @@ async function runEconomyCommand(
       await reply(
         sock,
         jid,
-        "🦇 Insufficient coins.",
+        "💰 Insufficient coins.",
         msg
       );
 
@@ -2216,7 +2216,7 @@ ${getPrefix()}buy crystal
       await reply(
         sock,
         jid,
-        `🦇 Use ${getPrefix()}shop to view available items.`,
+        `🛒 Use ${getPrefix()}shop to view available items.`,
         msg
       );
 
@@ -2230,7 +2230,7 @@ ${getPrefix()}buy crystal
       await reply(
         sock,
         jid,
-        `🦇 Insufficient coins.\n\nPrice: ${selected.price}\nYour coins: ${user.coins}`,
+        `💰 Insufficient coins.\n\nPrice: ${selected.price}\nYour coins: ${user.coins}`,
         msg
       );
 
@@ -2273,7 +2273,7 @@ ${getPrefix()}buy crystal
       await reply(
         sock,
         jid,
-        `🦇 Usage: ${getPrefix()}item <name>`,
+        `🎒 Usage: ${getPrefix()}item <name>`,
         msg
       );
 
@@ -2294,7 +2294,7 @@ ${getPrefix()}buy crystal
       await reply(
         sock,
         jid,
-        "🦇 That item is not in your inventory.",
+        "🎒 That item is not in your inventory.",
         msg
       );
 
@@ -2339,7 +2339,7 @@ ${getPrefix()}buy crystal
       await reply(
         sock,
         jid,
-        `🦇 ${lower.toUpperCase()} reward already claimed.\n\n⏳ Try again in ${formatDuration(
+        `🎁 ${lower.toUpperCase()} reward already claimed.\n\n⏳ Try again in ${formatDuration(
           cooldown -
           (now - user[key])
         )}.`,
@@ -2383,7 +2383,7 @@ ${getPrefix()}buy crystal
     await reply(
       sock,
       jid,
-      "🦇 Wallet banking is handled through your Aurelian coin balance. Use balance, give, buy and sell for the active economy.",
+      "🪙 Wallet banking is handled through your Aurelian coin balance. Use balance, give, buy and sell for the active economy.",
       msg
     );
 
@@ -2409,7 +2409,7 @@ ${getPrefix()}buy crystal
       await reply(
         sock,
         jid,
-        "🦇 Item not found in your inventory.",
+        "🎒 Item not found in your inventory.",
         msg
       );
 
@@ -2431,7 +2431,7 @@ ${getPrefix()}buy crystal
     await reply(
       sock,
       jid,
-      `🦇 *ITEM SOLD*\n\n${found.name}\n🪙 +${value} coins`,
+      `💰 *ITEM SOLD*\n\n${found.name}\n🪙 +${value} coins`,
       msg
     );
 
@@ -2458,7 +2458,7 @@ async function runFunCommand(
     await reply(
       sock,
       jid,
-      `🦇 *AURELIAN QUOTE*\n\n“${random(
+      `💬 *AURELIAN QUOTE*\n\n“${random(
         QUOTES
       )}”`,
       msg
@@ -2507,7 +2507,7 @@ async function runFunCommand(
     await reply(
       sock,
       jid,
-      `🦇 *AURELIAN COMPLIMENT*\n\n${random(
+      `✨ *AURELIAN COMPLIMENT*\n\n${random(
         COMPLIMENTS
       )}`,
       msg
@@ -2537,7 +2537,7 @@ function ensureGroupSettings(jid) {
       welcome: settings.welcome,
       goodbye: settings.goodbye,
       welcomeText:
-        "🦇 Welcome @user to *AURELIAN* realm.",
+        "👋 Welcome @user to *AURELIAN* realm.",
       goodbyeText:
         "☠️ @user has left the realm.",
       warnLimit: 3,
@@ -3754,7 +3754,7 @@ async function runGroupCommand(
           "",
           "⚔️ This realm is under Aurelian protection.",
           "🩸 Respect the rules.",
-          "🦇 Obey the administrators.",
+          "🛡️ Obey the administrators.",
           "",
           "AURELIAN — KHAN-MD"
         ].join("\n");
@@ -7813,7 +7813,7 @@ async function handleGroupParticipantsUpdate(
       const text =
         String(
           group.welcomeText ||
-          "🦇 Welcome @user to AURELIAN realm."
+          "👋 Welcome @user to AURELIAN realm."
         )
         .replace(
           /@user/g,
@@ -8131,7 +8131,7 @@ async function startBot() {
         connection === "open"
       ) {
         console.log(
-          "🦇 AURELIAN HAS AWAKENED — CONNECTED"
+          "⚡ AURELIAN HAS AWAKENED — CONNECTED"
         );
 
         console.log(
@@ -8463,7 +8463,7 @@ async function startBot() {
           await reply(
             sock,
             jid,
-            `🦇 Slow down, Soul. Try again in *${remaining}s*.`,
+            `⏱️ Slow down, Soul. Try again in *${remaining}s*.`,
             msg
           );
 
@@ -8478,7 +8478,7 @@ async function startBot() {
           sock,
           jid,
           msg.key,
-          "🦇"
+          "⚡"
         );
 
         // ------------------------------------------------------
