@@ -78,7 +78,7 @@ async function askGemini(prompt) {
   }
 
   const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    "https://generativelanguage.googleapis.com/v1beta/interactions",
     {
       method: "POST",
       headers: {
@@ -86,19 +86,10 @@ async function askGemini(prompt) {
         "x-goog-api-key": apiKey
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: buildPrompt(prompt)
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.8,
-          topP: 0.95,
-          maxOutputTokens: 2048
+        model: "gemini-3.8-flash",
+        input: buildPrompt(prompt),
+        generation_config: {
+          max_output_tokens: 2048
         }
       })
     }
@@ -112,10 +103,13 @@ async function askGemini(prompt) {
     );
   }
 
-  const text = data?.candidates?.[0]?.content?.parts
+  const text = data?.steps
+    ?.filter(step => step.type === "model_output")
+    ?.flatMap(step => step.content || [])
+    ?.filter(part => part.type === "text")
     ?.map(part => part.text || "")
-    .join("")
-    .trim();
+    ?.join("")
+    ?.trim();
 
   if (!text) {
     throw new Error("Gemini returned an empty response.");
