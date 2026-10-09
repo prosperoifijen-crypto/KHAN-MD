@@ -61,7 +61,7 @@ const BOT_NAME = "AURELIAN";
 const BOT_TITLE = "THE PRIMORDIAL LORD";
 const OWNER_NAME = "Aurelian";
 const VERSION = "5.0.0";
-const DEFAULT_PREFIX = "!";
+const DEFAULT_PREFIX = ".";
 const PERSISTENT_DIR =
   process.env.RAILWAY_VOLUME_MOUNT_PATH ||
   process.env.PERSISTENT_DIR ||
@@ -279,7 +279,7 @@ function formatDuration(ms) {
 
 function reaperHeader() {
   return [
-    "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 〕═╗",
+    "╔═〔 ☬ 𓁹 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 𓁹 ☬ 〕═╗",
     "┃☬│𓁹 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 — 𝚃𝙷𝙴 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳",
     "┃☬│𓁹 𝙰𝚗𝚌𝚒𝚎𝚗𝚝 𝙿𝚘𝚠𝚎𝚛 • 𝙸𝚖𝚖𝚘𝚛𝚝𝚊𝚕𝚒𝚝𝚢 • 𝚁𝚎𝚋𝚒𝚛𝚝𝚑 • 𝙼𝚢𝚜𝚝𝚎𝚛𝚢",
     "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝"
@@ -288,7 +288,7 @@ function reaperHeader() {
 
 function reaperBox(title, body = "") {
   return [
-    "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 〕═╗",
+    "╔═〔 ☬ 𓁹 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 𓁹 ☬ 〕═╗",
     `┃☬│𓁹 ${title}`,
     ...String(body || "").split("\\n").map(line => `┃☬│𓁹 ${line}`),
     "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝"
@@ -1251,7 +1251,7 @@ async function runGeneralCommand(
 ) {
   const prefix = getPrefix();
 
-  if (lower === "menu") {
+  if (lower === "__legacy_menu_disabled__") {
     const now = new Date();
     const time = now.toLocaleTimeString("en-GB");
     const date = now.toLocaleDateString("en-GB");
@@ -1426,28 +1426,24 @@ async function runGeneralCommand(
           command =>
             `┃☬│𓁹 ${prefix}${gothicCommand(command)}`
         ),
-        "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝"
+        `╚═〔 ☬ ${name} 〕═╝`
       ].join("\n")
     );
 
     const text = [
-      "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 〕═╗",
-      "┃☬│𓁹 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 — 𝚃𝙷𝙴 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳",
-      "┃☬│𓁹 𝙰𝚗𝚌𝚒𝚎𝚗𝚝 𝙿𝚘𝚠𝚎𝚛 • 𝙸𝚖𝚖𝚘𝚛𝚝𝚊𝚕𝚒𝚝𝚢 • 𝚁𝚎𝚋𝚒𝚛𝚝𝚑 • 𝙼𝚢𝚜𝚝𝚎𝚛𝚢",
-      `┃☬│𓁹 𝙼𝚘𝚍𝚎 : ${getModeDisplay().toUpperCase()}`,
-      "┃☬│𓁹 𝚂𝚝𝚊𝚝𝚞𝚜 : 𝙰𝚆𝙰𝙺𝙴𝙽𝙴𝙳",
+      "╔═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝚂𝚈𝚂𝚃𝙴𝙼 〕═╗",
       `┃☬│𓁹 𝙿𝚛𝚎𝚏𝚒𝚡 : ${prefix}`,
+      `┃☬│𓁹 𝙼𝚘𝚍𝚎 : ${getModeDisplay().toUpperCase()}`,
+      "┃☬│𓁹 𝚂𝚝𝚊𝚝𝚞𝚜 : 𝙰𝚠𝚊𝚔𝚎𝚗𝚎𝚍",
       `┃☬│𓁹 𝙲𝚘𝚖𝚖𝚊𝚗𝚍𝚜 : ${commandCount}`,
-      `┃☬│𓁹 𝚃𝚒𝚖𝚎 : ${time}`,
-      `┃☬│𓁹 𝙳𝚊𝚝𝚎 : ${date}`,
-      `┃☬│𓁹 𝚄𝚙𝚝𝚒𝚖𝚎 : ${formatUptime(process.uptime())}`,
-      "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝",
+      "┃☬│𓁹 𝚃𝚑𝚎𝚖𝚎 : 𝙳𝚊𝚛𝚔 𝙵𝚊𝚗𝚝𝚊𝚜𝚢 • 𝙲𝚎𝚕𝚎𝚜𝚝𝚒𝚊𝚕",
+      "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝚂𝚈𝚂𝚃𝙴𝙼 〕═╝",
       "",
       ...blocks,
       "",
       "╔═〔 ☬ 𝙰𝚄𝚁𝙴𝙻𝙸𝙰𝙽 〕═╗",
-      "┃☬│𓁹 𝔄𝔫𝔠𝔦𝔢𝔫𝔱 𝔓𝔬𝔴𝔢𝔯 • 𝔐𝔪𝔬𝔯𝔱𝔞𝔩𝔦𝔱𝔶",
-      "┃☬│𓁹 𝔕𝔢𝔟𝔦𝔯𝔱𝔥 • 𝔐𝔶𝔰𝔱𝔢𝔯𝔶",
+      "┃☬│𓁹 𝔄𝔫𝔠𝔦𝔢𝔫𝔱 𝔓𝔬𝔴𝔢𝔯 • 𝔦𝔪𝔪𝔬𝔯𝔱𝔞𝔩𝔦𝔱𝔶",
+      "┃☬│𓁹 𝔯𝔢𝔟𝔦𝔯𝔱𝔥 • 𝔐𝔶𝔰𝔱𝔢𝔯𝔶",
       "┃☬│𓁹 “ℑ 𝔡𝔬𝔫'𝔱 𝔠𝔥𝔞𝔰𝔢 𝔡𝔢𝔞𝔱𝔥.",
       "┃☬│𓁹 𝔇𝔢𝔞𝔱𝔥 𝔨𝔫𝔬𝔴𝔰 𝔴𝔥𝔢𝔯𝔢 𝔱𝔬 𝔣𝔦𝔫𝔡 𝔪𝔢.”",
       "╚═〔 ☬ 𝙿𝚁𝙸𝙼𝙾𝚁𝙳𝙸𝙰𝙻 𝙻𝙾𝚁𝙳 〕═╝",
